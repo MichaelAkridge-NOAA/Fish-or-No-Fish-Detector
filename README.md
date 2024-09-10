@@ -17,7 +17,7 @@ Is there a fish 🐟 or not?  Detect vulnerable marine ecosystems(corals, crinoi
     ```
     pip install -r requirements.txt
     ```
-3. Download the pre-trained model from [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) and save it in the `./models/` directory.
+3. Download the pre-trained model from [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems/blob/main/best.pt) and save it in the `./models/` directory.
 
 ### Running the App
 
