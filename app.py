@@ -23,7 +23,7 @@ model = YOLO(model_path)
 # Title and description for Streamlit app
 st.title("🐟 Yes Fish / No Fish Detector")
 st.write("""
-Is there a fish 🐟 or not? Upload one or more images to detect vulnerable marine ecosystems(corals, crinoids, sponges, and fish). 
+Is there a fish 🐟 or not? Upload one or more images to detect vulnerable marine ecosystems (corals, crinoids, sponges, and fish). 
 
 Uses the [**FathomNet VME Model**](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems). 
 Based on the **Ultralytics YOLOv8x Model** for its object detection capabilities and trained by [FathomNet](https://fathomnet.org) on vulnerable marine ecosystems.  
@@ -50,6 +50,8 @@ with col1:
     st.image("./logos/nmfs-opensci-logo3.png", width=100, caption="NOAA Open Science")
 with col2:
     st.image("./logos/FathomNet_black_bottomText_400px.png", width=100, caption="FathomNet")
+
+
 # Prediction kwargs
 PREDICT_KWARGS = {
     "conf": confidence,
@@ -143,9 +145,23 @@ def process_images(uploaded_files):
 # Image uploader with multiple file support
 uploaded_files = st.file_uploader("Choose image(s)...", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
 
-# Process the images only if not already processed
-if uploaded_files and "all_detections" not in st.session_state:
-    process_images(uploaded_files)
+# Display the Run and Clear buttons
+if uploaded_files:
+    col1, col2 = st.columns([1, 1])
+    
+    with col1:
+        run_button = st.button("Run")
+    with col2:
+        clear_button = st.button("Clear Results")
+
+    # Run the detection only when the "Run" button is clicked
+    if run_button and uploaded_files:
+        process_images(uploaded_files)
+    
+    # Clear the results and session state when the "Clear" button is clicked
+    if clear_button:
+        st.session_state.clear()
+        st.experimental_rerun()
 
 # Show the download button at the top if detections are present in session state
 if "all_detections" in st.session_state and st.session_state["all_detections"]:
