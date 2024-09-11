@@ -1,4 +1,4 @@
-# Yes Fish / No Fish Detector
+# Fish or No Fish Detector
 Is there a fish 🐟 or not?  Detect vulnerable marine ecosystems(corals, crinoids, sponges, and fish.) Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the **Ultralytics YOLOv8x** model, providing fast and accurate object detection capabilities.
 
 ## Features
