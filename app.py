@@ -1,3 +1,4 @@
+# Import required modules
 import streamlit as st
 from ultralytics import YOLO
 from PIL import Image
@@ -21,7 +22,7 @@ if not os.path.exists(model_path):
 model = YOLO(model_path)
 
 # Title and description for Streamlit app
-st.title("🐟 Yes Fish / No Fish Detector")
+st.title("🐟 Fish or No Fish Detector")
 st.write("""
 Is there a fish 🐟 or not? Upload one or more images to detect vulnerable marine ecosystems (corals, crinoids, sponges, and fish). 
 
@@ -29,12 +30,31 @@ Uses the [**FathomNet VME Model**](https://huggingface.co/FathomNet/vulnerable-m
 Based on the **Ultralytics YOLOv8x Model** for its object detection capabilities and trained by [FathomNet](https://fathomnet.org) on vulnerable marine ecosystems.  
 """)
 
+# Custom CSS to style buttons
+st.markdown("""
+    <style>
+    .stButton>button, .stDownloadButton>button {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 18px;
+        font-weight: bold;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    .stButton>button:hover, .stDownloadButton>button:hover {
+        background-color: #0056b3;
+    }
+    </style>
+""", unsafe_allow_html=True)
 # Sidebar with title, credits, and model details
-st.sidebar.title("🐟 Yes Fish / No Fish Detector")
+st.sidebar.title("🐟 Fish or No Fish Detector")
 st.sidebar.markdown("""
 For more information:
 - Contact: Michael.Akridge@NOAA.gov
-- Visit the [GitHub repository](https://github.com/MichaelAkridge-NOAA/Yes-Fish-No-Fish-Detector)
+- Visit the [GitHub repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/)
 """)
 # Sidebar with dynamic confidence slider
 st.sidebar.header("Models Parameter Settings")
@@ -50,7 +70,6 @@ with col1:
     st.image("./logos/nmfs-opensci-logo3.png", width=100, caption="NOAA Open Science")
 with col2:
     st.image("./logos/FathomNet_black_bottomText_400px.png", width=100, caption="FathomNet")
-
 
 # Prediction kwargs
 PREDICT_KWARGS = {
@@ -108,7 +127,7 @@ def process_images(uploaded_files):
             image = Image.open(uploaded_file)
 
             # Save the image to a temporary file in the system's temp directory
-            temp_file_path = os.path.join(temp_dir, f"temp_{uploaded_file.name}")
+            temp_file_path = os.path.join(temp_dir, f"{uploaded_file.name}")
             with open(temp_file_path, "wb") as temp_image:
                 temp_image.write(uploaded_file.getbuffer())
 
@@ -145,34 +164,44 @@ def process_images(uploaded_files):
 # Image uploader with multiple file support
 uploaded_files = st.file_uploader("Choose image(s)...", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
 
-# Display the Run and Clear buttons
+# Display the Run and Clear buttons with enhanced styling
+# Display the Run, Clear Results, and Download buttons side by side
+# Initialize session state for detection completion
+if "detection_completed" not in st.session_state:
+    st.session_state.detection_completed = False
+
+# Display the Run, Clear Results, and Download buttons side by side
 if uploaded_files:
-    col1, col2 = st.columns([1, 1])
+    # Create three columns with equal width
+    col1, col2, col3 = st.columns([1, 1, 1], gap="small")
     
+    # Align the buttons next to each other
     with col1:
-        run_button = st.button("Run")
+        run_button = st.button("Run", key="run_button")
     with col2:
-        clear_button = st.button("Clear Results")
+        clear_button = st.button("Clear Results", key="clear_button")
 
     # Run the detection only when the "Run" button is clicked
     if run_button and uploaded_files:
         process_images(uploaded_files)
-    
+        st.session_state.detection_completed = True  # Set flag to True when done
+
     # Clear the results and session state when the "Clear" button is clicked
     if clear_button:
-        st.session_state.clear()
-        st.experimental_rerun()
+        st.session_state.clear()  # Clear all session state
+        st.session_state.detection_completed = False  # Reset the flag
 
-# Show the download button at the top if detections are present in session state
-if "all_detections" in st.session_state and st.session_state["all_detections"]:
-    all_detections = st.session_state["all_detections"]
-    json_data = json.dumps(all_detections, indent=4)
+    # Display the download button if detections are present in session state
+    if st.session_state.detection_completed:
+        all_detections = st.session_state.get("all_detections", [])
+        if all_detections:
+            json_data = json.dumps(all_detections, indent=4)
 
-    # Display download button in the sidebar
-    st.sidebar.download_button(
-        label="Download all detections as JSON",
-        data=json_data,
-        file_name="all_detections.json",
-        mime="application/json",
-        key="download_json"
-    )
+            with col3:
+                st.download_button(
+                    label="Download Results as JSON & Clear",
+                    data=json_data,
+                    file_name="all_detections.json",
+                    mime="application/json",
+                    key="download_json"
+                )
