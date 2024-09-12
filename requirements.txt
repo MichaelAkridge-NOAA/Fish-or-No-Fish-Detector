@@ -1,4 +1,6 @@
 streamlit
 ultralytics
 Pillow
+pandas
 numpy
+matplotlib
