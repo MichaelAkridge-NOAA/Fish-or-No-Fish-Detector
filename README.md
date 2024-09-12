@@ -1,23 +1,24 @@
 # Fish or No Fish Detector
-Is there a fish 🐟 or not?  Detect vulnerable marine ecosystems(corals, crinoids, sponges, and fish.) Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the **Ultralytics YOLOv8x** model, providing fast and accurate object detection capabilities.
+Is there a fish 🐟 or not? Detect vulnerable marine ecosystems(corals, crinoids, sponges, and fish.) 
+
+Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), providing fast and accurate object detection capabilities.
 
 ## Features
-- Upload one or more images to detect vulnerable marine ecosystems.
-- Adjust the confidence threshold for predictions.
-- Download all detection and bounding box results in JSON format.
+- Upload one or more images to detect Fish
+- Adjust the confidence threshold for predictions
+- Download all detection and bounding box results in JSON format
 
 ### Installation
-
 1. Clone the repository:
     ```
-    git clone https://github.com/MichaelAkridge-NOAA/Yes-Fish-No-Fish-Detector.git
-    cd Yes-Fish-No-Fish-Detector
+    git clone https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector.git
+    cd Fish-or-No-Fish-Detector
     ```
 2. Install the required dependencies:
     ```
     pip install -r requirements.txt
     ```
-3. Download the pre-trained model from [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems/blob/main/best.pt) and save it in the `./models/` directory.
+3. Download the pre-trained [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems/blob/main/best.pt) and save it in the `./models/` directory.
 
 ### Running the App
 
