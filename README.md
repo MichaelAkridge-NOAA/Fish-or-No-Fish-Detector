@@ -8,14 +8,36 @@ Is there a fish 🐟 or not?
 - Adjust the confidence threshold for predictions & output
 - Download all detection results, counts and bounding box results in JSON format
 
-## Example of Result Data:
-<img src="./images/screenshots/03.png"/>
-
 ## Example of Fish Detection:
 <img src="./images/screenshots/05.png"/>
 
 ## Example of No Fish Detection:
 <img src="./images/screenshots/04.png"/>
+
+## Example of Result Data:
+<img src="./images/screenshots/03.png"/>
+
+## JSON Result Output
+```
+    {
+        "image_name": "03.jpg",
+        "bounding_boxes": [
+            {
+                "x1": 19.213233947753906,
+                "y1": 83.37771606445312,
+                "x2": 708.1510620117188,
+                "y2": 422.69561767578125,
+                "confidence": 0.9245972037315369,
+                "class_id": 2,
+                "class_label": "Fish"
+            }
+        ],
+        "fish_count": 1,
+        "confidences": [
+            0.9245972037315369
+        ]
+    },
+```
 
 ## Model Details
 Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), providing fast and accurate object detection capabilities.
