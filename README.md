@@ -38,10 +38,6 @@ Is there a fish 🐟 or not?
         ]
     },
 ```
-
-## Model Details
-Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), providing fast and accurate object detection capabilities.
-
 ### Installation
 1. Clone the repository:
     ```
@@ -62,14 +58,16 @@ streamlit run app.py
 ```
 ----------
 # Fish or No Fish - Video
-
-placeholder 
+- placeholder 
 
 ## Track & Plot Fish Over Time
 ![GIF description](./images/screenshots/00_video_track.gif)
 #### Read More/How to:
 - [Persistant Tracking](https://docs.ultralytics.com/modes/track/#persisting-tracks-loop)
 - [Plot Tracks over time](https://docs.ultralytics.com/modes/track/#plotting-tracks-over-time)
+
+## Model Details
+Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), providing fast and accurate object detection capabilities.
 
 ----------
 #### Disclaimer
