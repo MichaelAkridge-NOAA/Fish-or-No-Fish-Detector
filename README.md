@@ -1,12 +1,24 @@
 # Fish or No Fish Detector
-Is there a fish 🐟 or not? Detect vulnerable marine ecosystems(corals, crinoids, sponges, and fish.) 
+Is there a fish 🐟 or not? 
 
-Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), providing fast and accurate object detection capabilities.
+<img src="./images/screenshots/02.png"/>
 
-## Features
+## Features:
 - Upload one or more images to detect Fish
-- Adjust the confidence threshold for predictions
-- Download all detection and bounding box results in JSON format
+- Adjust the confidence threshold for predictions & output
+- Download all detection results, counts and bounding box results in JSON format
+
+## Example of Result Data:
+<img src="./images/screenshots/03.png"/>
+
+## Example of Fish Detection:
+<img src="./images/screenshots/05.png"/>
+
+## Example of No Fish Detection:
+<img src="./images/screenshots/04.png"/>
+
+## Model Details
+Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish. It is built on top of the [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), providing fast and accurate object detection capabilities.
 
 ### Installation
 1. Clone the repository:
