@@ -9,7 +9,10 @@ import tempfile
 import pandas as pd
 import matplotlib.pyplot as plt
 
+sample_images_folder = "./images/sample_images"
 st.set_page_config(
+    page_title="Fish Detector",
+    page_icon="🐟",
     layout="wide"
 )
 
@@ -24,6 +27,15 @@ if not os.path.exists(model_path):
 
 model = YOLO(model_path)
 
+# Function to load sample images
+def load_sample_images():
+    sample_images = []
+    for filename in os.listdir(sample_images_folder):
+        if filename.lower().endswith(('png', 'jpg', 'jpeg')):
+            image_path = os.path.join(sample_images_folder, filename)
+            sample_images.append(image_path)
+    return sample_images
+
 # Title and description for Streamlit app
 st.title("🐟 Fish or No Fish Detector")
 st.write("""
@@ -33,7 +45,36 @@ Uses the [**FathomNet VME Model**](https://huggingface.co/FathomNet/vulnerable-m
 Based on the [Ultralytics YOLOv8x Model](https://github.com/ultralytics/ultralytics) for its object detection capabilities and trained by [FathomNet](https://fathomnet.org) on vulnerable marine ecosystems.  
 """)
 
-# Custom CSS to style buttons
+# Custom CSS for button and uploader alignment
+st.markdown("""
+    <style>
+    .custom-file-uploader {
+        display: flex;
+        align-items: center;
+        margin-top: -10px; /* Adjust to move button closer */
+        justify-content: flex-start;
+    }
+    .css-1cpxqw2 {
+        flex-grow: 1;  /* Let file uploader take remaining space */
+    }
+    .sample-button {
+        font-size: 14px;
+        padding: 8px;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-left: 10px;
+        height: 38px; /* Ensure button matches uploader height */
+    }
+    .sample-button:hover {
+        background-color: #0056b3;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Custom CSS for default button styling
 st.markdown("""
     <style>
     .stButton>button, .stDownloadButton>button {
@@ -66,16 +107,14 @@ st.sidebar.header("Models Parameter Settings")
 confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.15)
 final_confidence = st.sidebar.slider("Final Yes/No Confidence Threshold", 0.0, 1.0, 0.5)
 
-st.sidebar.markdown("""
----
-""")
+st.sidebar.markdown("---")
 
 # Sidebar logos arranged in columns
 col1, col2 = st.sidebar.columns(2)
 with col1:
-    st.image("./logos/nmfs-opensci-logo3.png", width=100, caption="NOAA Open Science")
+    st.image("./images/logos/nmfs-opensci-logo3.png", width=100, caption="NOAA Open Science")
 with col2:
-    st.image("./logos/FathomNet_black_bottomText_400px.png", width=100, caption="FathomNet")
+    st.image("./images/logos/FathomNet_black_bottomText_400px.png", width=100, caption="FathomNet")
 
 # Prediction kwargs
 PREDICT_KWARGS = {
@@ -90,18 +129,16 @@ def run(image_path):
 
         # Extract bounding box data using valid attributes
         boxes = []
-        fish_count = 0  # To count the number of fish detected in this image
-        confidences = []  # Store confidences for plotting later
+        fish_count = 0
+        confidences = []
         for box in results[0].boxes:
-            x1, y1, x2, y2 = box.xyxy[0].tolist()  # xyxy format
+            x1, y1, x2, y2 = box.xyxy[0].tolist()
             conf = box.conf[0].item()
             class_id = int(box.cls[0].item())
-            class_label = model.names[class_id]  # Get class label from model names
+            class_label = model.names[class_id]
 
-            # Store confidence for plotting
             confidences.append(conf)
 
-            # Check if the detection is for a fish and above the confidence threshold
             if class_label == "Fish" and conf > confidence:
                 fish_count += 1
 
@@ -112,21 +149,19 @@ def run(image_path):
                 "y2": y2,
                 "confidence": conf,
                 "class_id": class_id,
-                "class_label": class_label  # Add class label to metadata
+                "class_label": class_label
             })
 
-        # Prepare metadata and bounding box information for this image
         metadata = {
             "image_name": os.path.basename(image_path),
             "bounding_boxes": boxes,
-            "fish_count": fish_count,  # Add fish count to metadata
-            "confidences": confidences  # Include confidences for plotting
+            "fish_count": fish_count,
+            "confidences": confidences
         }
 
-        # Use YOLO's built-in plot method to draw bounding boxes on the image
-        result_image = results[0].plot()[:, :, ::-1]  # Convert to RGB for display in Streamlit
+        result_image = results[0].plot()[:, :, ::-1]
 
-        return result_image, metadata  # Return the processed image and metadata
+        return result_image, metadata
     except Exception as e:
         logging.error(f"Error during prediction: {e}")
         st.error("An error occurred during prediction.")
@@ -134,111 +169,90 @@ def run(image_path):
 
 # Reusable function to handle multiple image uploads and display results
 def process_images(uploaded_files):
-    all_detections = []  # To store all detections for JSON export
-    result_images = []  # To store images with bounding boxes
-    summary_data = []   # To store summary info for each image
-    confidences = []  # For storing all confidences for plotting
-
-    # Get the system's temporary directory
+    all_detections = []
+    result_images = []
+    summary_data = []
+    confidences = []
     temp_dir = tempfile.gettempdir()
 
-    # Loop over each uploaded file
     for uploaded_file in uploaded_files:
-        if uploaded_file.type.startswith('image/'):
-            image = Image.open(uploaded_file)
-
-            # Save the image to a temporary file in the system's temp directory
-            temp_file_path = os.path.join(temp_dir, f"{uploaded_file.name}")
-            with open(temp_file_path, "wb") as temp_image:
-                temp_image.write(uploaded_file.getbuffer())
-
-            # Run YOLO detection
-            st.write(f"Detecting in {uploaded_file.name}...")
-            with st.spinner('Running detection...'):
-                result_image, detection_metadata = run(temp_file_path)
-            
-            if result_image is not None:
-                # Add this image's detection data and image to the lists
-                result_images.append((result_image, uploaded_file.name))
-                all_detections.append(detection_metadata)
-
-                # Add summary data for charting and table
-                summary_data.append({
-                    "image_name": uploaded_file.name,
-                    "fish_detected": detection_metadata["fish_count"] > 0,
-                    "fish_count": detection_metadata["fish_count"]
-                })
-
-                # Collect all confidences for scatter plot
-                confidences.extend(detection_metadata["confidences"])
-
-                # Display summary on the same line with emoji, bold, and larger colored YES/NO
-                fish_detected = detection_metadata['fish_count'] > 0
-                fish_status = f"<b><span style='color: green; font-size: 24px;'>YES</span></b> 🐟" if fish_detected else f"<b><span style='color: red; font-size: 24px;'>NO</span></b>"
-
-                # Display formatted summary
-                st.markdown(f"**Summary for {uploaded_file.name}:** Fish detected: {fish_status}", unsafe_allow_html=True)
-
-                # Create two columns to show images side by side
-                col1, col2 = st.columns(2)
-
-                # Display the uploaded image in the first column
-                with col1:
-                    st.image(image, caption=f"Uploaded Image - {uploaded_file.name}", use_column_width=True)
-
-                # Display the detection result in the second column
-                with col2:
-                    st.image(result_image, caption=f"Detection Results - {uploaded_file.name}", use_column_width=True)
-                
-                st.success(f"Detection completed for {uploaded_file.name} successfully! 🐟")
-            else:
-                st.warning(f"No marine ecosystems detected in {uploaded_file.name}.")
+        if isinstance(uploaded_file, str):  # Check if it's a sample image path
+            image_path = uploaded_file
+            image = Image.open(image_path)
         else:
-            st.error(f"Please upload a valid image file (PNG, JPG, JPEG) for {uploaded_file.name}.")
-    
-    # Store the detection data in session state to avoid re-running
-    st.session_state["all_detections"] = all_detections
+            image = Image.open(uploaded_file)
+            image_path = os.path.join(temp_dir, f"{uploaded_file.name}")
+            image.save(image_path)
 
-    # Return the summary data for charting
+        st.write(f"Detecting in {os.path.basename(image_path)}...")
+        with st.spinner('Running detection...'):
+            result_image, detection_metadata = run(image_path)
+
+        if result_image is not None:
+            result_images.append((result_image, os.path.basename(image_path)))
+            all_detections.append(detection_metadata)
+
+            summary_data.append({
+                "image_name": os.path.basename(image_path),
+                "fish_detected": detection_metadata["fish_count"] > 0,
+                "fish_count": detection_metadata["fish_count"]
+            })
+
+            confidences.extend(detection_metadata["confidences"])
+
+            # Display fish status
+            fish_detected = detection_metadata['fish_count'] > 0
+            fish_status = f"<b><span style='color: green; font-size: 24px;'>YES</span></b> 🐟" if fish_detected else f"<b><span style='color: red; font-size: 24px;'>NO</span></b>"
+
+            st.markdown(f"**Summary for {os.path.basename(image_path)}:** Fish detected: {fish_status}", unsafe_allow_html=True)
+
+            # Display images side by side
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(image, caption=f"Uploaded Image - {os.path.basename(image_path)}", use_column_width=True)
+            with col2:
+                st.image(result_image, caption=f"Detection Results - {os.path.basename(image_path)}", use_column_width=True)
+
+            st.success(f"Detection completed for {os.path.basename(image_path)} successfully! 🐟")
+
+        else:
+            st.warning(f"No marine ecosystems detected in {os.path.basename(image_path)}.")
+
+    st.session_state["all_detections"] = all_detections
     return summary_data, confidences
 
 # Function to display a summary table and scatter plot side by side with image labels
-# Function to display a summary table and scatter plot side by side with image labels
 def display_summary(summary_data, confidences):
     if summary_data:
-        # Convert summary data into a DataFrame
         df = pd.DataFrame(summary_data)
 
-        # Strip file extensions from image names
-        df['image_name'] = df['image_name'].apply(lambda x: os.path.splitext(x)[0])
-
-        # Create two columns: one for the table and one for the scatter plot
         col1, col2 = st.columns(2)
 
-        # Display the table with fish counts in the first column
         with col1:
             st.subheader("Summary of Detections")
             st.table(df[["image_name", "fish_count"]])
 
-        # Create a scatter plot of confidence levels in the second column
         with col2:
             st.subheader("Fish Detection Confidence Levels")
             fig, ax = plt.subplots()
+            confidence_index = 0
 
-            # Loop through confidences and plot each with an image label
-            for i, conf in enumerate(confidences):
-                image_name = df.iloc[i // len(df), 0]  # Associate image name with each confidence
-                ax.scatter(i, conf, c='blue')
-                ax.text(i, conf, image_name, fontsize=8, ha='right', rotation=45)  # Rotate labels for better readability
+            for i, row in df.iterrows():
+                num_confidences_for_image = len([c for c in confidences[confidence_index:confidence_index + row["fish_count"]]])
 
-            # Add threshold line and labels
+                for j in range(num_confidences_for_image):
+                    if confidence_index < len(confidences):
+                        ax.scatter(confidence_index, confidences[confidence_index], c='blue')
+                        ax.text(confidence_index, confidences[confidence_index], row['image_name'], 
+                                fontsize=10, ha='center', va='bottom', rotation=0)
+                        confidence_index += 1
+
             ax.axhline(final_confidence, color='red', linestyle='--', label=f'Final Threshold ({final_confidence})')
             ax.set_xlabel('Detections')
             ax.set_ylabel('Confidence Level')
-            ax.legend(loc='upper right')
+            ax.legend(loc='lower left')
             st.pyplot(fig)
 
-        # Add download button next to summary at the bottom
         if st.session_state.get("all_detections"):
             json_data = json.dumps(st.session_state["all_detections"], indent=4)
             st.download_button(
@@ -249,34 +263,57 @@ def display_summary(summary_data, confidences):
                 key="download_json_bottom"
             )
 
-
 # Image uploader with multiple file support
+# Image uploader with multiple file support
+st.markdown('<div class="custom-file-uploader">', unsafe_allow_html=True)
 uploaded_files = st.file_uploader("Choose image(s)...", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
 
+# Check if files are uploaded, hide the "Auto Run with Sample Images" button if they are
+if not uploaded_files and not st.session_state.get('use_sample_images', False):
+    use_sample_images = st.button("Or Auto Run Using Sample Images", key="sample_button")
+else:
+    use_sample_images = None
+st.markdown('</div>', unsafe_allow_html=True)
+
+# Add the functionality for the "Try it with Sample Images" button
+if use_sample_images:
+    sample_images = load_sample_images()
+    st.session_state['use_sample_images'] = True
+    for sample_image in sample_images:
+        st.session_state.setdefault('uploaded_files', []).append(sample_image)
+    st.session_state['run_automatically'] = True
+
 # Display the Run, Clear, and Download buttons with enhanced styling
-if uploaded_files:
-    # Create three columns with equal width
+if uploaded_files or st.session_state.get('uploaded_files'):
     col1, col2, col3 = st.columns([1, 1, 1], gap="small")
-    
-    # Align the buttons next to each other
-    with col1:
-        run_button = st.button("Run", key="run_button")
+
+    if not st.session_state.get('use_sample_images', False):
+        with col1:
+            run_button = st.button("Click to Run", key="run_button")
+    else:
+        run_button = None
+
+    # Initialize clear_button to None to avoid NameError
+    clear_button = None
+
+    # Conditionally hide the "Clear Results" button while processing
     with col2:
-        clear_button = st.button("Clear Results", key="clear_button")
+        if not st.session_state.get('processing', False):
+            clear_button = st.button("Clear Results", key="clear_button")
 
-    # Run the detection only when the "Run" button is clicked
-    if run_button and uploaded_files:
-        summary_data, confidences = process_images(uploaded_files)
-        
-        # Display the summary table and scatter plot side by side
+    # Run automatically if triggered by the sample images button or the run button
+    if run_button or st.session_state.get('run_automatically'):
+        st.session_state['processing'] = True  # Set the processing flag
+        summary_data, confidences = process_images(uploaded_files or st.session_state['uploaded_files'])
         display_summary(summary_data, confidences)
+        st.session_state['processing'] = False  # Reset the processing flag after processing is done
+        st.session_state['run_automatically'] = False
+        st.session_state['use_sample_images'] = False
 
-    # Clear the results and session state when the "Clear" button is clicked
+    # Now this check will work, even if clear_button is not defined earlier
     if clear_button:
-        st.session_state.clear()  # Clear all session state
-        st.session_state.detection_completed = False  # Reset the flag
+        st.session_state.clear()
 
-    # JSON download button
     if st.session_state.get("all_detections"):
         with col3:
             json_data = json.dumps(st.session_state["all_detections"], indent=4)
