@@ -11,6 +11,9 @@ This model was trained to detect fish in underwater **Grayscale Imagery** using 
 ## Model Weights
 The model's weights can be found [here](./yolov8n_fish_trained.pt)
 
+## Test Results
+![GIF description](./unsupervised_ai_test.gif)
+
 ## Training Data
 - **Dataset**: `fish_dataset.zip` consisting of Grayscale(black-and-white) underwater footage.
 - **Training/Validation Split**: The dataset was split into 80% training and 20% validation.
@@ -45,7 +48,6 @@ Below are the key metrics from the model evaluation on the validation set:
 ### F1 Score Curve
 ![F1 Score Curve](./train/F1_curve.png)
 
-
 ## How to Use the Model
 
 To use the trained model, follow these steps:
@@ -57,18 +59,12 @@ To use the trained model, follow these steps:
    # Load the model
    model = YOLO("yolov8n_fish_trained.pt")
 
-Limitations
+### Limitations
 The model was trained on black-and-white underwater footage, and may not generalize well to color images or videos with different lighting conditions.
 The unsupervised learning nature of this model may lead to some incorrect detections, particularly in noisy environments where it may confuse other underwater objects for fish.
 Images with complex backgrounds, occlusions, or poor resolution may affect the model's performance.
 
-Ethical Considerations
-The unsupervised learning approach could lead to biases in detections, especially in new environments or types of marine life that were not represented in the training dataset.
-This model should not be used in critical applications without thorough validation to ensure it doesn't miss key detections or produce incorrect results in sensitive scenarios.
-Consider the potential environmental or societal impact when using the model for marine conservation or research, and ensure that the detections are verified.
-
 ### Additional Notes:
 - **Grayscale Imagery**: The model may perform better on grayscale images and might not generalize well to color underwater footage or images with different lighting conditions.
 - **Unsupervised Learning**: Since using an unsupervised approach, it's worth noting that this can make the model more flexible but also more prone to errors or misclassifications without annotated data.
-
-
+- **Ethical Considerations** The unsupervised learning approach could lead to biases in detections, especially in new environments or types of marine life that were not represented in the training dataset. This model should not be used in critical applications without thorough validation to ensure it doesn't miss key detections or produce incorrect results in sensitive scenarios. Consider the potential environmental or societal impact when using the model for marine conservation or research, and ensure that the detections are verified.
