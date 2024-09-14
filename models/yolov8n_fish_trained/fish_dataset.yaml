@@ -1,0 +1,9 @@
+
+train: /content/fish_dataset/images/train
+val: /content/fish_dataset/images/val
+
+# Number of classes
+nc: 1
+
+# Class names
+names: ['fish']
