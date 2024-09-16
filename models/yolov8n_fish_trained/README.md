@@ -1,6 +1,6 @@
-# Fish Detection Model Card
+# Fish Detector | Grayscale  
 
-## Model Overview
+## Model Details / Overview
 This model was trained to detect fish in underwater **Grayscale Imagery** using the YOLOv8n architecture. The model leverages **unsupervised learning** techniques to learn patterns and identify fish without relying on fully labeled datasets.
 
 - **Model Architecture**: YOLOv8n
@@ -8,26 +8,25 @@ This model was trained to detect fish in underwater **Grayscale Imagery** using 
 - **Footage Type**: Grayscale(Black-and-White) Underwater Footage
 - **Classes**: Fish
 
+# Intended Use
+- real time detections on Grayscale(Black-and-White) Underwater Footage
+- Post-processed video/imagery on Grayscale(Black-and-White) Underwater Footage
+
+# Factors
+### Model Performance 
+- Unsupervised Learning: Flexible pattern recognition without fully annotated datasets, suited for grayscale imagery.
+- Grayscale Imagery: Trained specifically on black-and-white underwater footage, enhancing performance in this environment.
+- Model Architecture (YOLOv8n): lightweight and optimized for real-time fish detection in underwater footage.
+- Training Data: Quality and diversity of the grayscale underwater dataset, split into 80% training and 20% validation.
+- Training Parameters: Configured with 50 epochs, a 0.001 learning rate, and 416x416 image size for optimal model convergence.
+
 ## Model Weights
 The model's weights can be found [here](./yolov8n_fish_trained.pt)
 
 ## Test Results
 ![GIF description](./unsupervised_ai_test.gif)
 
-## Training Data
-- **Dataset**: `fish_dataset.zip` consisting of Grayscale(black-and-white) underwater footage.
-- **Training/Validation Split**: The dataset was split into 80% training and 20% validation.
-- **Classes**: The model was trained on a single class (fish).
-- **Learning Approach**: Unsupervised learning, meaning the model identified patterns in the data without needing detailed annotations for all images.
-
-## Training Configuration
-- **Model Weights File**: `yolov8n_fish_trained.pt`
-- **Number of Epochs**: 50
-- **Learning Rate**: 0.001
-- **Batch Size**: 16
-- **Image Size**: 416x416
-
-## Training Metrics
+## Metrics
 Below are the key metrics from the model evaluation on the validation set:
 
 - **Precision**: 0.863
@@ -35,7 +34,7 @@ Below are the key metrics from the model evaluation on the validation set:
 - **mAP50**: 0.936
 - **mAP50-95**: 0.856
 
-## Validation Results
+## Training Validation Results
 ### Training and Validation Losses
 ![Training and Validation Losses](./train/results.png)
 
@@ -48,7 +47,21 @@ Below are the key metrics from the model evaluation on the validation set:
 ### F1 Score Curve
 ![F1 Score Curve](./train/F1_curve.png)
 
-## How to Use the Model
+## Training Configuration
+- **Model Weights File**: `yolov8n_fish_trained.pt`
+- **Number of Epochs**: 50
+- **Learning Rate**: 0.001
+- **Batch Size**: 16
+- **Image Size**: 416x416
+- 
+## Training and Evaluation Data
+- **Dataset**: `fish_dataset.zip` consisting of Grayscale(black-and-white) underwater footage.
+- **Training/Validation Split**: The dataset was split into 80% training and 20% validation.
+- **Classes**: The model was trained on a single class (fish).
+- **Learning Approach**: Unsupervised learning, meaning the model identified patterns in the data without needing detailed annotations for all images.
+
+## Deployment
+### How to Use the Model
 
 To use the trained model, follow these steps:
 
