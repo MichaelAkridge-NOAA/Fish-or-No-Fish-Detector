@@ -6,6 +6,7 @@ This model was trained to detect fish in underwater **Grayscale Imagery** using 
 - **Model Architecture**: YOLOv8n
 - **Task**: Object Detection (Fish Detection)
 - **Footage Type**: Grayscale(Black-and-White) Underwater Footage
+- **Dataset**: 23,411 MOUSS dataset images from one location(drop) consisting of Grayscale(black-and-white) underwater footage.
 - **Classes**: Fish
 
 # Intended Use
@@ -30,10 +31,10 @@ The model's weights can be found [here](./yolov8n_fish_trained_lgds.pt)
 ## Metrics
 Below are the key metrics from the model evaluation on the validation set:
 
-- **Precision**: 0.863
-- **Recall**: 0.869
-- **mAP50**: 0.936
-- **mAP50-95**: 0.856
+- **Precision**: 0.756
+- **Recall**: 0.751
+- **mAP50**: 0.81
+- **mAP50-95**: 0.615
 
 ## Training Validation Results
 ### Training and Validation Losses
@@ -60,7 +61,7 @@ Below are the key metrics from the model evaluation on the validation set:
 - **Training/Validation Split**: The dataset was split into 80% training and 20% validation.
 - **Classes**: The model was trained on a single class (fish).
 - **Learning Approach**: Unsupervised learning, meaning the model identified patterns in the data without needing detailed annotations for all images.
-
+- **Model summary**(fused): 168 layers, 3,005,843 parameters, 0 gradients, 8.1 GFLOPs
 ## Download Training Data (Requires Google SDK GSUTIL tool)
 ```
 gsutil -m rsync -r gs://nmfs_odp_pifsc/PIFSC/SOD/MOUSS/jpg/20161014_192048_1 U:\temp\20161014_192048_1
