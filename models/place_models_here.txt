@@ -1,0 +1,8 @@
+#place models in this folder
+# links
+# https://huggingface.co/akridge/yolo8-fish-detector-grayscale/resolve/main/yolov8n_fish_trained.pt?download=true
+# https://huggingface.co/akridge/yolo8-fish-detector-grayscale/resolve/yolo8-fish-detector-grayscale-lgds/yolov8n_fish_trained_lgds.pt?download=true
+# fathomnet
+# https://huggingface.co/FathomNet/vulnerable-marine-ecosystems/resolve/main/best.pt?download=true
+# base yolo
+# https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt
