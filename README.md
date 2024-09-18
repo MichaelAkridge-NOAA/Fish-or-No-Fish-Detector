@@ -1,8 +1,9 @@
 # Fish or No Fish Detector
 Is there a fish 🐟 or not? 
 
-<img src="./images/screenshots/02.png"/>
+![GIF description](./images/screenshots/00_video_track.gif)
 
+<img src="./images/screenshots/02.png"/>
 ## Features:
 - Upload one or more images to detect Fish
 - Adjust the confidence threshold for predictions & output
