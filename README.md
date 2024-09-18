@@ -58,7 +58,6 @@ streamlit run app.py
 ```
 ----------
 # Fish or No Fish - Video
-- placeholder 
 
 ## Track & Plot Fish Over Time
 ![GIF description](./images/screenshots/00_video_track.gif)
