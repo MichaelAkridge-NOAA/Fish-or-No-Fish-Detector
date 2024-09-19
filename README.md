@@ -4,6 +4,7 @@ Is there a fish 🐟 or not?
 ![GIF description](./images/screenshots/00_video_track.gif)
 
 <img src="./images/screenshots/02.png"/>
+
 ## Features:
 - Upload one or more images to detect Fish
 - Adjust the confidence threshold for predictions & output
@@ -49,7 +50,10 @@ Is there a fish 🐟 or not?
     ```
     pip install -r requirements.txt
     ```
-3. Download the pre-trained [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems/blob/main/best.pt) and save it in the `./models/` directory.
+3. Download one of the pre-trained models and save it in the `./models/` directory.
+- [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems/blob/main/best.pt)
+- Small dataset model: https://huggingface.co/akridge/yolo8-fish-detector-grayscale
+- Large dataset model: https://huggingface.co/akridge/yolo8-fish-detector-grayscale/tree/yolo8-fish-detector-grayscale-lgds
 
 ### Running the App
 
