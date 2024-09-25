@@ -88,3 +88,9 @@ See the [LICENSE.md](./LICENSE.md) for details on this code.
 ##### Credit, Models & Licences
 - For [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems), see their [license](https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/cc-by-4.0.md) for more details
 - For Ultralytics YOLOv8x Model, see their [license](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) for more details.  
+
+<div align="center">
+  <img src="./images/logos/makerlab_logo.png" alt="makerlab" width="200"/>
+  <img src="./images/logos/FathomNet_black_bottomText_400px.png" alt="fathomnet" width="100"/>
+  <img src="./images/logos/nmfs-opensci-logo3.png" alt="opensci" width="200"/>
+</div>
