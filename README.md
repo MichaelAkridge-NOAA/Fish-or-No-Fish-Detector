@@ -89,14 +89,17 @@ This repository is a scientific product and is not official communication of the
 
 ##### License 
 See the [LICENSE.md](./LICENSE.md) for details on this code.
-
-##### Credits, Models & Licences
 - For [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems), see their [license](https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/cc-by-4.0.md) for more details
-- For Ultralytics YOLOv8x Model, see their [license](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) for more details.
-- And the MakerLab team at PIFSC, who generously contributed ideas, test data, and AI development techniques & direction. Their collaboration and innovative ideas have been invaluable in shaping the detection techniques used in this project and advancing marine ecosystem research.
+- For [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), see their [license](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) for more details.
+
+##### Credits
+- MakerLab team at PIFSC, who generously contributed ideas, test data, and AI development techniques & direction. Their collaboration and innovative ideas have been invaluable in shaping the detection techniques used in this project and advancing marine ecosystem research.
+- [Fathomnet](https://fathomnet.org/) for base trained model layer used for semi-unsupervised training of new detection model
 
 <div align="center">
   <img src="./images/logos/makerlab_logo.png" alt="makerlab" width="250"/>
   <img src="./images/logos/nmfs-opensci-logo3.png" alt="opensci" width="200"/>
   <img src="./images/logos/FathomNet_black_bottomText_400px.png" alt="fathomnet" width="100"/>
 </div>
+
+### Contact: Michael.Akridge@noaa.gov
