@@ -1,8 +1,10 @@
+<div align="left">
+  <img src="./images/logos/makerlab_logo.png" alt="makerlab" align="right" width="160"/>
+  <img src="./images/logos/nmfs-opensci-logo3.png" alt="opensci" align="right" width="130"/>
+</div>
+
 # Fish or No Fish Detector
 Is there a fish 🐟 or not? 
-<img src="./images/logos/makerlab_logo.png" alt="makerlab" width="160" align="right" style="margin-bottom: 20px;"/>
-
-<img src="./images/logos/nmfs-opensci-logo3.png" alt="opensci" width="130" align="right" style="margin-bottom: 20px;"/>
 
 ![GIF description](./images/screenshots/00_video_track.gif)
 
