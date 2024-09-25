@@ -1,5 +1,14 @@
 # Fish or No Fish Detector
 Is there a fish 🐟 or not? 
+## Features:
+- Upload one or more images to detect Fish
+- Adjust the confidence threshold for predictions & output
+- Download all detection results, counts and bounding box results in JSON format
+<div style="float: right; text-align: right;">
+    <img src="./images/logos/makerlab_logo.png" alt="makerlab" width="150" align="right" style="margin-bottom: 20px;"/><br><br>
+    <img src="./images/logos/nmfs-opensci-logo3.png" alt="opensci" width="120" align="right" style="margin-bottom: 20px;"/><br><br><br>
+    <img src="./images/logos/FathomNet_black_bottomText_400px.png" alt="fathomnet" align="right" width="100"/>
+</div>
 
 ![GIF description](./images/screenshots/00_video_track.gif)
 
@@ -85,9 +94,10 @@ This repository is a scientific product and is not official communication of the
 ##### License 
 See the [LICENSE.md](./LICENSE.md) for details on this code.
 
-##### Credit, Models & Licences
+##### Credits, Models & Licences
 - For [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems), see their [license](https://huggingface.co/datasets/choosealicense/licenses/blob/main/markdown/cc-by-4.0.md) for more details
-- For Ultralytics YOLOv8x Model, see their [license](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) for more details.  
+- For Ultralytics YOLOv8x Model, see their [license](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) for more details.
+- And the MakerLab team at PIFSC, who generously contributed ideas, test data, and AI development techniques & direction. Their collaboration and innovative ideas have been invaluable in shaping the detection techniques used in this project and advancing marine ecosystem research.
 
 <div align="center">
   <img src="./images/logos/makerlab_logo.png" alt="makerlab" width="250"/>
