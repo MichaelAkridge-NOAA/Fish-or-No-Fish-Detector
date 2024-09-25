@@ -1,14 +1,8 @@
 # Fish or No Fish Detector
 Is there a fish 🐟 or not? 
-## Features:
-- Upload one or more images to detect Fish
-- Adjust the confidence threshold for predictions & output
-- Download all detection results, counts and bounding box results in JSON format
-<div style="float: right; text-align: right;">
-    <img src="./images/logos/makerlab_logo.png" alt="makerlab" width="150" align="right" style="margin-bottom: 20px;"/><br><br>
-    <img src="./images/logos/nmfs-opensci-logo3.png" alt="opensci" width="120" align="right" style="margin-bottom: 20px;"/><br><br><br>
-    <img src="./images/logos/FathomNet_black_bottomText_400px.png" alt="fathomnet" align="right" width="100"/>
-</div>
+<img src="./images/logos/makerlab_logo.png" alt="makerlab" width="160" align="right" style="margin-bottom: 20px;"/>
+
+<img src="./images/logos/nmfs-opensci-logo3.png" alt="opensci" width="130" align="right" style="margin-bottom: 20px;"/>
 
 ![GIF description](./images/screenshots/00_video_track.gif)
 
