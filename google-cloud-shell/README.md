@@ -11,3 +11,8 @@
 - https://cloud.google.com/shell/docs/how-cloud-shell-works
 - https://cloud.google.com/shell/docs/open-in-cloud-shell
 - https://cloud.google.com/shell/docs/configuring-cloud-shell#environment_customization
+
+## Notes
+```
+docker build -t gcs-fish-detector .
+```
