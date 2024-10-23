@@ -12,11 +12,11 @@ import cv2
 client = storage.Client()
 bucket_name = "nmfs_odp_pifsc"
 
-# Define input and output GCS directories
-input_folder_gcs = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/raw/"
-output_images_gcs = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/images/"
-output_labels_gcs = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/labels/"
-verification_images_gcs = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/verification/"
+# Default input and output GCS directories
+DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/raw/"
+DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/images/"
+DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/labels/"
+DEFAULT_VERIFICATION_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/verification/"
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -54,8 +54,17 @@ def draw_and_save_verification_image(results, output_path):
     result_image = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
     save_image_to_gcs(bucket, output_path, result_image)
 
+# Function to display verification images from GCS
+def display_verification_images(verification_images_gcs):
+    st.write("Verification Images:")
+    blobs = client.list_blobs(bucket_name, prefix=verification_images_gcs)
+    for blob in blobs:
+        if blob.name.endswith(('.jpg', '.png')):
+            img = read_image_from_gcs(blob)
+            st.image(img, caption=os.path.basename(blob.name), use_column_width=True)
+
 # Function to process images, run inference, and save results
-def process_images_from_gcs():
+def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs):
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
     processed_count = 0
     
@@ -95,8 +104,17 @@ def process_images_from_gcs():
             processed_count += 1
 
     st.write("Dataset preparation complete!")
+    display_verification_images(verification_images_gcs)
 
 # Streamlit UI
 st.title("YOLO Fish Detection - Streamlit App")
+
+# User inputs for GCS paths
+input_folder_gcs = st.text_input("Input Folder GCS Path", DEFAULT_INPUT_FOLDER_GCS)
+output_images_gcs = st.text_input("Output Images GCS Path", DEFAULT_OUTPUT_IMAGES_GCS)
+output_labels_gcs = st.text_input("Output Labels GCS Path", DEFAULT_OUTPUT_LABELS_GCS)
+verification_images_gcs = st.text_input("Verification Images GCS Path", DEFAULT_VERIFICATION_IMAGES_GCS)
+
+# Button to start processing
 if st.button("Start Processing"):
-    process_images_from_gcs()
+    process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs)
