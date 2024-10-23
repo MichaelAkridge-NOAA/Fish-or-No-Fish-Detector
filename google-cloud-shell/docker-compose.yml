@@ -1,5 +1,6 @@
 services:
-  nodd-app:
+  streamlit_app:
     image: michaelakridge326/gcs-fish-detector:latest
     ports:
       - "8501:8501"
+    network_mode: "host" 
