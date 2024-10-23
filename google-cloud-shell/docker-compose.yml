@@ -1,6 +1,5 @@
 services:
-  nodd-app:
+  streamlit-app:
     build: .
     ports:
       - "8501:8501"
-
