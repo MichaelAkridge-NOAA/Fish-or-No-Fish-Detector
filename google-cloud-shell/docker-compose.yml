@@ -1,5 +1,5 @@
 services:
-  streamlit-app:
-    build: .
+  nodd-app:
+    image: gcs-fish-detector
     ports:
       - "8501:8501"
