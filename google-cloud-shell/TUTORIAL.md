@@ -24,7 +24,7 @@ Docker Compose is a tool that allows you to define and manage Docker application
 - Maps port 8080 on the shell host to port 8080 in the container.
 - And starts up the app
 
-## Step 2: Access Jupyter Lab & RStudio
+## Step 2: Access the App
 Once the container is running, you can visit it by::
 - Clicking the Web Preview button <walkthrough-web-preview-icon></walkthrough-web-preview-icon>
 - and select "Preview on port 8080" To Access your Environment
