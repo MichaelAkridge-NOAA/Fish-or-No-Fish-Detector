@@ -1,0 +1,33 @@
+name: Build and Push Image to Docker Hub
+on:
+  workflow_dispatch: # Trigger workflow manually from GitHub Actions
+jobs:
+  build:
+    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+    strategy:
+      matrix:
+        folder: ['./images/google-cloud-shell'] # Adjust this as needed
+    env:
+      VERSION: 1.0.1 # Set this to your current version
+    steps:
+      # Check out the repository to the runner
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Set lower case owner name
+        run: echo "OWNER_LC=${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]' | awk -F "=" '{print "OWNER_LC="$2}' >> $GITHUB_ENV
+        
+      # Log in to Docker Hub using github repo secrets for authentication
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }} # Docker Hub username stored in secrets
+          password: ${{ secrets.DOCKER_TOKEN }} # Docker Hub token stored in secrets
+      
+      # Build and push Docker image to Docker Hub
+      - name: Build and push Docker image to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: ./images/google-cloud-shell # Directory containing Dockerfile and context
+          push: true # Push the built image to Docker Hub
+          tags: ${{ secrets.DOCKER_USERNAME }}/gcs-fish-detector:latest # Tag for the Docker image

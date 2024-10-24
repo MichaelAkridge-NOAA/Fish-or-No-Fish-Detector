@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install required Python packages
-RUN pip install streamlit ultralytics google-cloud-storage pillow opencv-python-headless
+RUN pip install streamlit ultralytics google-cloud-storage pillow opencv-python-headless scikit-image
 
 # Set the working directory
 WORKDIR /app

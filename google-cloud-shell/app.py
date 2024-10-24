@@ -8,13 +8,22 @@ from google.cloud import storage
 from PIL import Image
 import numpy as np
 import cv2
+from skimage.color import gray2rgb
+
+st.set_page_config(
+    page_title="Fish Detector",
+    page_icon="🐟",
+    layout="wide"
+)
 
 # Configure logging
 logging.basicConfig(filename='yolo_fish_detection.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize Google Cloud Storage client
 client = storage.Client()
-bucket_name = "nmfs_odp_pifsc"
+
+# Default GCS bucket name
+DEFAULT_BUCKET_NAME = "nmfs_odp_pifsc"
 
 # Default input and output GCS directories
 DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
@@ -30,9 +39,6 @@ st.write(f"Using device: {device}")
 large_model = YOLO("/app/yolov8n_fish_trained.pt")
 large_model = large_model.to(device)
 
-# Define GCS bucket
-bucket = client.bucket(bucket_name)
-
 # Function to read and preprocess images directly from GCS
 def read_image_from_gcs(image_blob):
     try:
@@ -47,9 +53,9 @@ def read_image_from_gcs(image_blob):
 
         # Check if the image is not already in (H, W, 3) format
         if len(img_array.shape) == 2:  # Grayscale image
-            img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
-        elif img_array.shape[-1] != 3:  # Other unexpected formats
-            raise ValueError(f"Unexpected image shape: {img_array.shape}")
+            img_array = gray2rgb(img_array)  # Use skimage to convert grayscale to RGB
+        elif img_array.shape[-1] == 1:  # Single channel grayscale
+            img_array = gray2rgb(img_array.squeeze())  # Squeeze to remove extra dimension and convert
 
         return img_array
     except Exception as e:
@@ -89,7 +95,8 @@ def display_verification_images(verification_images_gcs):
                 st.image(img, caption=os.path.basename(blob.name), use_column_width=True)
 
 # Function to process images, run inference, and save results
-def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5):
+def process_images_from_gcs(bucket_name, input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5):
+    bucket = client.bucket(bucket_name)
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
     processed_count = 0
     display_count = 0
@@ -102,10 +109,20 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
         if img is None:
             continue
         
+        # Convert to OpenCV-compatible format (BGR)
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+        
         img_name = os.path.basename(blob.name)
         
         with st.spinner(f'Processing {img_name}...'):
-            results = large_model(img, conf=confidence)
+            try:
+                # Add a batch dimension if the model expects a batch
+                img_batch = np.expand_dims(img, axis=0)  # Add batch dimension
+                results = large_model(img_batch, conf=confidence)
+            except Exception as e:
+                st.error(f"Failed to process {img_name}: {e}")
+                logging.error(f"Failed to process {img_name}: {e}")
+                continue
         
         logging.info(f"Processing {img_name}, found {len(results[0].boxes) if results[0].boxes is not None else 0} instances.")
         
@@ -154,15 +171,23 @@ st.title("🐟 Google Cloud Fish Detector - NODD App")
 # Add description with links to the repository and model
 st.markdown("""
 **Welcome to the Google Cloud Fish Detector - NODD App!**
-This application leverages advanced object detection models to identify fish in images stored on Google Cloud. 
+Identify fish in images stored on Google Cloud. 
 
-🔗 **[GitHub Repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/tree/MOUSS_2016/google-cloud-shell)**  
-🧠 **[YOLOv11 Fish Detector Model on Hugging Face](https://huggingface.co/akridge/yolo11-fish-detector-grayscale)**
+🔗 **[GitHub Repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/)**  
+🧠 **[YOLO11 Fish Detector Model on Hugging Face](https://huggingface.co/akridge/yolo11-fish-detector-grayscale)**
 """)
 
 # Sidebar configuration
 st.sidebar.title("🐟 Fish Detection Settings")
+st.sidebar.markdown("""
+For more information:
+- Contact: Michael.Akridge@NOAA.gov
+- Visit the [GitHub repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/)
+""")
 confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.15)
+
+# Bucket name input with default value
+bucket_name = st.sidebar.text_input("🪣 GCS Bucket Name", DEFAULT_BUCKET_NAME)
 
 # Use columns for better layout
 col1, col2 = st.columns(2)
@@ -176,7 +201,7 @@ with col2:
 # Start processing button
 with st.expander("🔄 Start Processing"):
     if st.button("🚀 Process Images"):
-        process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5)
+        process_images_from_gcs(bucket_name, input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5)
 
 # Apply custom CSS for improved styling
 st.markdown("""
