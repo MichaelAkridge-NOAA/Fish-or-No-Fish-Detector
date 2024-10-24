@@ -17,11 +17,6 @@ client = storage.Client()
 bucket_name = "nmfs_odp_pifsc"
 
 # Default input and output GCS directories
-#DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/raw/"
-#DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/images/"
-#DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/labels/"
-#DEFAULT_VERIFICATION_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/verification/"
-# Default input and output GCS directories
 DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
 DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
 DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
@@ -38,11 +33,28 @@ large_model = large_model.to(device)
 # Define GCS bucket
 bucket = client.bucket(bucket_name)
 
-# Function to read images directly from GCS
+# Function to read and preprocess images directly from GCS
 def read_image_from_gcs(image_blob):
-    img_bytes = image_blob.download_as_bytes()
-    img = Image.open(io.BytesIO(img_bytes))
-    return np.array(img)
+    try:
+        img_bytes = image_blob.download_as_bytes()
+        img = Image.open(io.BytesIO(img_bytes))
+
+        # Ensure the image is in RGB format
+        img = img.convert("RGB")
+
+        # Convert to a NumPy array
+        img_array = np.array(img)
+
+        # Check if the image is not already in (H, W, 3) format
+        if len(img_array.shape) == 2:  # Grayscale image
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
+        elif img_array.shape[-1] != 3:  # Other unexpected formats
+            raise ValueError(f"Unexpected image shape: {img_array.shape}")
+
+        return img_array
+    except Exception as e:
+        logging.error(f"Failed to read image {image_blob.name}: {e}")
+        return None
 
 # Function to save labels to GCS
 def save_yolo_labels_to_gcs(bucket, label_path, content):
@@ -52,10 +64,13 @@ def save_yolo_labels_to_gcs(bucket, label_path, content):
 
 # Function to save images to GCS
 def save_image_to_gcs(bucket, image_path, img_array):
-    _, img_encoded = cv2.imencode('.jpg', img_array)
-    blob = bucket.blob(image_path)
-    blob.upload_from_string(img_encoded.tobytes(), content_type='image/jpeg')
-    logging.info(f"Uploaded {image_path} to GCS.")
+    try:
+        _, img_encoded = cv2.imencode('.jpg', img_array)
+        blob = bucket.blob(image_path)
+        blob.upload_from_string(img_encoded.tobytes(), content_type='image/jpeg')
+        logging.info(f"Uploaded {image_path} to GCS.")
+    except Exception as e:
+        logging.error(f"Failed to save image {image_path} to GCS: {e}")
 
 # Function to draw bounding boxes using YOLO's plot method and save for verification
 def draw_and_save_verification_image(results, output_path):
@@ -70,20 +85,28 @@ def display_verification_images(verification_images_gcs):
     for blob in blobs:
         if blob.name.endswith(('.jpg', '.png')):
             img = read_image_from_gcs(blob)
-            st.image(img, caption=os.path.basename(blob.name), use_column_width=True)
+            if img is not None:
+                st.image(img, caption=os.path.basename(blob.name), use_column_width=True)
 
 # Function to process images, run inference, and save results
-def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs):
+def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5):
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
     processed_count = 0
+    display_count = 0
     
     for blob in blobs:
         if not blob.name.endswith(('.jpg', '.png')):
             continue
         
         img = read_image_from_gcs(blob)
+        if img is None:
+            continue
+        
         img_name = os.path.basename(blob.name)
-        results = large_model(img)
+        
+        with st.spinner(f'Processing {img_name}...'):
+            results = large_model(img, conf=confidence)
+        
         logging.info(f"Processing {img_name}, found {len(results[0].boxes) if results[0].boxes is not None else 0} instances.")
         
         output_image_path = f"{output_images_gcs}{img_name}"
@@ -112,6 +135,16 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
             draw_and_save_verification_image(results, verification_image_path)
             processed_count += 1
 
+        # Display side-by-side images (Limit to max_display_count)
+        if display_count < max_display_count:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.image(img, caption=f"Original Image - {img_name}", use_column_width=True)
+            with col2:
+                processed_img = results[0].plot()
+                st.image(processed_img, caption=f"Detection Results - {img_name}", use_column_width=True)
+            display_count += 1
+
     st.success("🎉 Dataset preparation complete!")
     display_verification_images(verification_images_gcs)
 
@@ -127,19 +160,40 @@ This application leverages advanced object detection models to identify fish in 
 🧠 **[YOLOv11 Fish Detector Model on Hugging Face](https://huggingface.co/akridge/yolo11-fish-detector-grayscale)**
 """)
 
+# Sidebar configuration
+st.sidebar.title("🐟 Fish Detection Settings")
+confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.15)
+
 # Use columns for better layout
 col1, col2 = st.columns(2)
-
 with col1:
-    # User inputs for GCS paths
     input_folder_gcs = st.text_input("📂 Input Folder GCS Path", DEFAULT_INPUT_FOLDER_GCS)
     output_images_gcs = st.text_input("🖼️ Output Images GCS Path", DEFAULT_OUTPUT_IMAGES_GCS)
-
 with col2:
     output_labels_gcs = st.text_input("📝 Output Labels GCS Path", DEFAULT_OUTPUT_LABELS_GCS)
     verification_images_gcs = st.text_input("✅ Verification Images GCS Path", DEFAULT_VERIFICATION_IMAGES_GCS)
 
-# Add a button in an expanded section
+# Start processing button
 with st.expander("🔄 Start Processing"):
     if st.button("🚀 Process Images"):
-        process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs)
+        process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5)
+
+# Apply custom CSS for improved styling
+st.markdown("""
+    <style>
+    .stButton>button {
+        width: 100%;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 18px;
+        font-weight: bold;
+        background-color: #007BFF;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+    .stButton>button:hover {
+        background-color: #0056b3;
+    }
+    </style>
+""", unsafe_allow_html=True)
