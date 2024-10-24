@@ -32,10 +32,13 @@ docker compose up
 - **Google Cloud Storage**: For storage of images and results
 ## Build Notes
 ```
-docker build -t gcs-fish-detector .
-# docker build --no-cache -t gcs-fish-detector .
+#docker build -t gcs-fish-detector .
+docker build --no-cache -t gcs-fish-detector .
 docker tag gcs-fish-detector michaelakridge326/gcs-fish-detector:latest
 docker push michaelakridge326/gcs-fish-detector:latest
+# other helpful commands
+docker rm google-cloud-shell-streamlit_app-1
+docker image prune -a
 ```
 ### More info on Google Cloud Shell:
 - https://cloud.google.com/shell/docs/how-cloud-shell-works
