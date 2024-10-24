@@ -74,6 +74,12 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
         img_name = os.path.basename(blob.name)
         
         try:
+            # Check if the image is valid
+            image = cv2.imread(temp_image_path)
+            if image is None or image.shape[0] == 0 or image.shape[1] == 0:
+                logging.error(f"Invalid image dimensions for {img_name}")
+                continue
+
             with st.spinner(f'Processing {img_name}...'):
                 # Use the temporary file path for inference
                 results = large_model.predict(temp_image_path, conf=confidence)
@@ -91,6 +97,10 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                 with col2:
                     st.image(processed_img, caption=f"Detection Results - {img_name}", use_column_width=True)
                 display_count += 1
+
+        except cv2.error as e:
+            logging.error(f"OpenCV error while processing {img_name}: {e}")
+            st.error(f"Failed to process {img_name}: {e}")
 
         except Exception as e:
             logging.error(f"Failed to process {img_name}: {e}")
