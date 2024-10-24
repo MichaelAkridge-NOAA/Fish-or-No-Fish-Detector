@@ -2,11 +2,15 @@ import streamlit as st
 import io
 import os
 import torch
+import logging
 from ultralytics import YOLO
 from google.cloud import storage
 from PIL import Image
 import numpy as np
 import cv2
+
+# Configure logging
+logging.basicConfig(filename='yolo_fish_detection.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize Google Cloud Storage client
 client = storage.Client()
@@ -39,34 +43,27 @@ def read_image_from_gcs(image_blob):
 def save_yolo_labels_to_gcs(bucket, label_path, content):
     blob = bucket.blob(label_path)
     blob.upload_from_string(content)
-    st.write(f"Uploaded {label_path} to GCS.")
+    logging.info(f"Uploaded {label_path} to GCS.")
 
 # Function to save images to GCS
 def save_image_to_gcs(bucket, image_path, img_array):
     _, img_encoded = cv2.imencode('.jpg', img_array)
     blob = bucket.blob(image_path)
     blob.upload_from_string(img_encoded.tobytes(), content_type='image/jpeg')
-    st.write(f"Uploaded {image_path} to GCS.")
+    logging.info(f"Uploaded {image_path} to GCS.")
 
 # Function to draw bounding boxes using YOLO's plot method and save for verification
 def draw_and_save_verification_image(results, output_path):
     result_image = results[0].plot()
     result_image = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
     save_image_to_gcs(bucket, output_path, result_image)
-
-# Function to display verification images from GCS
-def display_verification_images(verification_images_gcs):
-    st.write("Verification Images:")
-    blobs = client.list_blobs(bucket_name, prefix=verification_images_gcs)
-    for blob in blobs:
-        if blob.name.endswith(('.jpg', '.png')):
-            img = read_image_from_gcs(blob)
-            st.image(img, caption=os.path.basename(blob.name), use_column_width=True)
+    return result_image
 
 # Function to process images, run inference, and save results
 def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs):
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
     processed_count = 0
+    max_verification_images = 5  # Set the maximum number of verification images to display
     
     for blob in blobs:
         if not blob.name.endswith(('.jpg', '.png')):
@@ -75,7 +72,7 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
         img = read_image_from_gcs(blob)
         img_name = os.path.basename(blob.name)
         results = large_model(img)
-        st.write(f"Processing {img_name}, found {len(results[0].boxes) if results[0].boxes is not None else 0} instances.")
+        logging.info(f"Processing {img_name}, found {len(results[0].boxes) if results[0].boxes is not None else 0} instances.")
         
         output_image_path = f"{output_images_gcs}{img_name}"
         save_image_to_gcs(bucket, output_image_path, img)
@@ -98,23 +95,40 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
             label_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt').replace('.png', '.txt')}"
             save_yolo_labels_to_gcs(bucket, label_path, labels_content)
 
-        if processed_count < 5:
+        # Display only a limited number of verification images
+        if processed_count < max_verification_images:
             verification_image_path = f"{verification_images_gcs}{img_name}"
-            draw_and_save_verification_image(results, verification_image_path)
+            verification_image = draw_and_save_verification_image(results, verification_image_path)
+            st.image(verification_image, caption=f"Verification: {img_name}", use_column_width=True)
             processed_count += 1
 
-    st.write("Dataset preparation complete!")
-    display_verification_images(verification_images_gcs)
+    st.success("🎉 Dataset preparation complete!")
 
 # Streamlit UI
-st.title("YOLO Fish Detection - Streamlit App")
+st.title("🐟 Google Cloud Fish Detector - NODD App")
 
-# User inputs for GCS paths
-input_folder_gcs = st.text_input("Input Folder GCS Path", DEFAULT_INPUT_FOLDER_GCS)
-output_images_gcs = st.text_input("Output Images GCS Path", DEFAULT_OUTPUT_IMAGES_GCS)
-output_labels_gcs = st.text_input("Output Labels GCS Path", DEFAULT_OUTPUT_LABELS_GCS)
-verification_images_gcs = st.text_input("Verification Images GCS Path", DEFAULT_VERIFICATION_IMAGES_GCS)
+# Add description with links to the repository and model
+st.markdown("""
+**Welcome to the Google Cloud Fish Detector - NODD App!**
+This application leverages advanced object detection models to identify fish in images stored on Google Cloud. 
 
-# Button to start processing
-if st.button("Start Processing"):
-    process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs)
+🔗 **[GitHub Repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/tree/MOUSS_2016/google-cloud-shell)**  
+🧠 **[YOLOv11 Fish Detector Model on Hugging Face](https://huggingface.co/akridge/yolo11-fish-detector-grayscale)**
+""")
+
+# Use columns for better layout
+col1, col2 = st.columns(2)
+
+with col1:
+    # User inputs for GCS paths
+    input_folder_gcs = st.text_input("📂 Input Folder GCS Path", DEFAULT_INPUT_FOLDER_GCS)
+    output_images_gcs = st.text_input("🖼️ Output Images GCS Path", DEFAULT_OUTPUT_IMAGES_GCS)
+
+with col2:
+    output_labels_gcs = st.text_input("📝 Output Labels GCS Path", DEFAULT_OUTPUT_LABELS_GCS)
+    verification_images_gcs = st.text_input("✅ Verification Images GCS Path", DEFAULT_VERIFICATION_IMAGES_GCS)
+
+# Add a button in an expanded section
+with st.expander("🔄 Start Processing"):
+    if st.button("🚀 Process Images"):
+        process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs)
