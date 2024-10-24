@@ -17,10 +17,15 @@ client = storage.Client()
 bucket_name = "nmfs_odp_pifsc"
 
 # Default input and output GCS directories
-DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/raw/"
-DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/images/"
-DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/labels/"
-DEFAULT_VERIFICATION_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/verification/"
+#DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/raw/"
+#DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/images/"
+#DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/labels/"
+#DEFAULT_VERIFICATION_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/verification/"
+# Default input and output GCS directories
+DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
+DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
+DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
+DEFAULT_VERIFICATION_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/verification/"
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -57,13 +62,20 @@ def draw_and_save_verification_image(results, output_path):
     result_image = results[0].plot()
     result_image = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
     save_image_to_gcs(bucket, output_path, result_image)
-    return result_image
+
+# Function to display verification images from GCS
+def display_verification_images(verification_images_gcs):
+    st.write("Verification Images:")
+    blobs = client.list_blobs(bucket_name, prefix=verification_images_gcs)
+    for blob in blobs:
+        if blob.name.endswith(('.jpg', '.png')):
+            img = read_image_from_gcs(blob)
+            st.image(img, caption=os.path.basename(blob.name), use_column_width=True)
 
 # Function to process images, run inference, and save results
 def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs):
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
     processed_count = 0
-    max_verification_images = 5  # Set the maximum number of verification images to display
     
     for blob in blobs:
         if not blob.name.endswith(('.jpg', '.png')):
@@ -95,14 +107,13 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
             label_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt').replace('.png', '.txt')}"
             save_yolo_labels_to_gcs(bucket, label_path, labels_content)
 
-        # Display only a limited number of verification images
-        if processed_count < max_verification_images:
+        if processed_count < 5:
             verification_image_path = f"{verification_images_gcs}{img_name}"
-            verification_image = draw_and_save_verification_image(results, verification_image_path)
-            st.image(verification_image, caption=f"Verification: {img_name}", use_column_width=True)
+            draw_and_save_verification_image(results, verification_image_path)
             processed_count += 1
 
     st.success("🎉 Dataset preparation complete!")
+    display_verification_images(verification_images_gcs)
 
 # Streamlit UI
 st.title("🐟 Google Cloud Fish Detector - NODD App")
