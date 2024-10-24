@@ -64,6 +64,18 @@ def upload_to_gcs(file_path, destination_blob_name):
     except Exception as e:
         logging.error(f"Failed to upload file {file_path} to GCS: {e}")
 
+# Function to save labels in YOLO format
+def save_yolo_format_labels(results, label_path, image_width, image_height):
+    with open(label_path, 'w') as f:
+        for box in results[0].boxes:
+            class_id = 0  # Assuming 'fish' is class 0
+            # Normalize coordinates: YOLO format expects (class_id, x_center, y_center, width, height)
+            x_center = box.xywh[0][0] / image_width
+            y_center = box.xywh[0][1] / image_height
+            width = box.xywh[0][2] / image_width
+            height = box.xywh[0][3] / image_height
+            f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
+
 # Function to process images, run inference, save results, and display first 5 detections
 def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5):
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
@@ -94,22 +106,15 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                 results = large_model.predict(temp_image_path, conf=confidence)
 
             if results[0].boxes is not None and len(results[0].boxes) > 0:
-                # Save the processed image with detections
-                processed_img_path = temp_image_path.replace(".jpg", "_processed.jpg")
-                processed_img = results[0].plot()
-                cv2.imwrite(processed_img_path, processed_img)
+                # Save the original image to GCS (no bounding boxes overlaid)
+                output_image_gcs_path = f"{output_images_gcs}{img_name}"
+                upload_to_gcs(temp_image_path, output_image_gcs_path)
 
-                # Upload the processed image to GCS
-                output_image_gcs_path = f"{output_images_gcs}{img_name.replace('.jpg', '_processed.jpg')}"
-                upload_to_gcs(processed_img_path, output_image_gcs_path)
-
-                # Save and upload labels to GCS
+                # Save labels in YOLO format and upload to GCS
                 label_path = temp_image_path.replace(".jpg", ".txt")
-                with open(label_path, 'w') as f:
-                    for box in results[0].boxes:
-                        x, y, w, h = box.xywh.cpu().numpy()[0]  # Assuming one bounding box per line
-                        f.write(f"fish {x} {y} {w} {h}\n")
-                
+                image_height, image_width, _ = image.shape
+                save_yolo_format_labels(results, label_path, image_width, image_height)
+
                 output_label_gcs_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt')}"
                 upload_to_gcs(label_path, output_label_gcs_path)
 
@@ -120,7 +125,7 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                     with col1:
                         st.image(original_img, caption=f"Original Image - {img_name}", use_column_width=True)
                     with col2:
-                        st.image(processed_img, caption=f"Detection Results - {img_name}", use_column_width=True)
+                        st.write(f"Detections for {img_name} displayed.")
                     display_count += 1
 
         except cv2.error as e:
