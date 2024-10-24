@@ -1,15 +1,7 @@
-# Welcome to Your Google Cloud Shell Open Science Tutorial!
+# Welcome to the Google Cloud Fish Detector App!
 
-This tutorial was made to help users explore NMFS-OpenSci container images and environments tailored for open science & reproducible research.
-Check out the NMFS-OpenSci Image Repository for more details:
-- https://github.com/nmfs-opensci/container-images
-
-## Today you will learn the basics of:
-- Using Docker Compose to set up and run services
-- And deploy a pre-configured open science environment that launches Jupyter Lab with RStudio
-
-### Time Needed
-- Less than 5 mins
+For more details, visit the Github here:
+- https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector
 
 ## Step 1: Running the Environment
 In your terminal <walkthrough-cloud-shell-icon></walkthrough-cloud-shell-icon> below, run the following command:
@@ -27,10 +19,10 @@ Docker Compose is a tool that allows you to define and manage Docker application
 - Facilitates reproducible environments
 
 ### This command will:
-- Pull the 'py-rocket-base' image from the NMFS Open-Sci Github Container Registry
-- Create and start the py-rocket-base container.
+- Pull the 'gcs-fish-detector' image from the Docker Hub: https://hub.docker.com/repository/docker/michaelakridge326/gcs-fish-detector/general
+- Creates and starts the app container.
 - Maps port 8080 on the shell host to port 8080 in the container.
-- And starts up Jupyter Lab & RStudio with the specified settings.
+- And starts up the app
 
 ## Step 2: Access Jupyter Lab & RStudio
 Once the container is running, you can visit it by::
@@ -39,10 +31,12 @@ Once the container is running, you can visit it by::
 
 ### FAQ: How to Tell if its running?
 You should see a message in the terminal once it's ready, similar to:
-"py-rocket-base  | [I 2024-06-11 02:01:34.895 ServerApp] Jupyter Server 2.14.1 is running at:"
+"streamlit-app  | [I 2024-06-11 02:01:34.895 ServerApp] Server 2.14.1 is running at:"
 
 ## Congratulations
 That's it! As you can see it's very easy to get started with Google Cloud Shell and container images.
 <walkthrough-conclusion-trophy></walkthrough-conclusion-trophy>
+
 Next steps:
-Explore using your google cloud environment with data on google cloud for faster performance. Our PIFSC Google Cloud Data Archive: https://console.cloud.google.com/storage/browser/nmfs_odp_pifsc
+Explore using your google cloud environment with data on google cloud for faster performance. 
+- Our PIFSC Google Cloud Data Archive: https://console.cloud.google.com/storage/browser/nmfs_odp_pifsc
