@@ -1,9 +1,15 @@
 # Dockerfile
 FROM python:3.9-slim
 
-# Install required packages
-RUN apt-get update && apt-get install -y wget && \
-    pip install streamlit ultralytics google-cloud-storage pillow opencv-python-headless
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install required Python packages
+RUN pip install streamlit ultralytics google-cloud-storage pillow opencv-python-headless
 
 # Set the working directory
 WORKDIR /app
@@ -18,4 +24,4 @@ COPY app.py /app/app.py
 EXPOSE 8501
 
 # Run the Streamlit app
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.enableCORS=false"]
+ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]

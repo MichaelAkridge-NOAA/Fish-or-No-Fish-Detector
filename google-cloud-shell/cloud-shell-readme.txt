@@ -41,14 +41,14 @@
 
 ##################################################################
 #                                                                #
-#               NODD App                                         #
+#               Google Cloud Fish Detector                       #
 #                                                                #
 ##################################################################
 
 Aloha! You are now in a Google Cloud Shell session.
 
 Check out: 
-- 
+- https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/tree/MOUSS_2016/google-cloud-shell
 And Github Codespaces and More Examples Here:
 - https://github.com/MichaelAkridge-NOAA/Open-Science-Codespaces
 

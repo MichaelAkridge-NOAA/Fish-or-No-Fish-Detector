@@ -2,5 +2,5 @@ services:
   streamlit_app:
     image: michaelakridge326/gcs-fish-detector:latest
     ports:
-      - "8501:8501"
+      - "8080:8080"
     network_mode: "host" 
