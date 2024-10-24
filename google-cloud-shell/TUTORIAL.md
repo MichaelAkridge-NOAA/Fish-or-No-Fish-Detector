@@ -3,6 +3,9 @@
 For more details, visit the Github here:
 - https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector
 
+And view the model here: 
+- https://huggingface.co/akridge/yolo11-fish-detector-grayscale
+
 ## Step 1: Running the Environment
 In your terminal <walkthrough-cloud-shell-icon></walkthrough-cloud-shell-icon> below, run the following command:
 ```
