@@ -25,7 +25,7 @@ jobs:
       - name: Build and push Docker image to Docker Hub
         uses: docker/build-push-action@v6
         with:
-          context: ./images/google-cloud-shell
+          context: ./google-cloud-shell # Updated path to the correct directory
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/gcs-fish-detector:latest
