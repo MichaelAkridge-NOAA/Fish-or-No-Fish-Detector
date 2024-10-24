@@ -12,7 +12,7 @@
 - https://cloud.google.com/shell/docs/open-in-cloud-shell
 - https://cloud.google.com/shell/docs/configuring-cloud-shell#environment_customization
 
-## Notes
+## Build Notes
 ```
 docker build -t gcs-fish-detector .
 docker tag gcs-fish-detector michaelakridge326/gcs-fish-detector:latest
