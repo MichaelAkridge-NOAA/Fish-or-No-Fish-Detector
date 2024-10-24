@@ -55,7 +55,16 @@ def read_image_from_gcs_and_save(image_blob):
         logging.error(f"Failed to read image {image_blob.name}: {e}")
         return None
 
-# Function to process images, run inference, and save results
+# Function to upload files to GCS
+def upload_to_gcs(file_path, destination_blob_name):
+    try:
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_filename(file_path)
+        logging.info(f"File {file_path} uploaded to {destination_blob_name}.")
+    except Exception as e:
+        logging.error(f"Failed to upload file {file_path} to GCS: {e}")
+
+# Function to process images, run inference, save results, and display first 5 detections
 def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5):
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
     processed_count = 0
@@ -84,19 +93,35 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                 # Use the temporary file path for inference
                 results = large_model.predict(temp_image_path, conf=confidence)
 
-            logging.info(f"Processing {img_name}, found {len(results[0].boxes) if results[0].boxes is not None else 0} instances.")
-            
-            # Display side-by-side images (Limit to max_display_count)
-            if display_count < max_display_count:
-                # Load the original image to show it in Streamlit
-                original_img = Image.open(temp_image_path)
+            if results[0].boxes is not None and len(results[0].boxes) > 0:
+                # Save the processed image with detections
+                processed_img_path = temp_image_path.replace(".jpg", "_processed.jpg")
                 processed_img = results[0].plot()
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.image(original_img, caption=f"Original Image - {img_name}", use_column_width=True)
-                with col2:
-                    st.image(processed_img, caption=f"Detection Results - {img_name}", use_column_width=True)
-                display_count += 1
+                cv2.imwrite(processed_img_path, processed_img)
+
+                # Upload the processed image to GCS
+                output_image_gcs_path = f"{output_images_gcs}{img_name.replace('.jpg', '_processed.jpg')}"
+                upload_to_gcs(processed_img_path, output_image_gcs_path)
+
+                # Save and upload labels to GCS
+                label_path = temp_image_path.replace(".jpg", ".txt")
+                with open(label_path, 'w') as f:
+                    for box in results[0].boxes:
+                        x, y, w, h = box.xywh.cpu().numpy()[0]  # Assuming one bounding box per line
+                        f.write(f"fish {x} {y} {w} {h}\n")
+                
+                output_label_gcs_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt')}"
+                upload_to_gcs(label_path, output_label_gcs_path)
+
+                # Display the detections (Limit to max_display_count)
+                if display_count < max_display_count:
+                    original_img = Image.open(temp_image_path)
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.image(original_img, caption=f"Original Image - {img_name}", use_column_width=True)
+                    with col2:
+                        st.image(processed_img, caption=f"Detection Results - {img_name}", use_column_width=True)
+                    display_count += 1
 
         except cv2.error as e:
             logging.error(f"OpenCV error while processing {img_name}: {e}")
