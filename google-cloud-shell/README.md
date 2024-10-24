@@ -33,6 +33,7 @@ docker compose up
 ## Build Notes
 ```
 docker build -t gcs-fish-detector .
+# docker build --no-cache -t gcs-fish-detector .
 docker tag gcs-fish-detector michaelakridge326/gcs-fish-detector:latest
 docker push michaelakridge326/gcs-fish-detector:latest
 ```
