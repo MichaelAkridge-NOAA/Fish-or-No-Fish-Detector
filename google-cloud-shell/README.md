@@ -30,7 +30,10 @@ docker compose up
 ## Requirements
 - **Google Cloud Shell**: Run this directly in Google Cloud Shell for easy authentication.
 - **Google Cloud Storage**: For storage of images and results
-## Build Notes
+## Auto Build Notes
+- see github workflow
+
+## Manual Build Notes
 ```
 #docker build -t gcs-fish-detector .
 docker build --no-cache -t gcs-fish-detector .
