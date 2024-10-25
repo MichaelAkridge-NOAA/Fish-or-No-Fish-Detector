@@ -10,6 +10,7 @@ import numpy as np
 import cv2
 import tempfile
 from datetime import datetime
+import sqlite3
 
 st.set_page_config(
     page_title="Fish Detector",
@@ -29,11 +30,10 @@ bucket_name = "nmfs_odp_pifsc"
 DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
 DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
 DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
-CHECKPOINT_LOG_GCS_PATH = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/processed_images.txt"
-# Default input and output GCS directories
-#DEFAULT_INPUT_FOLDER_GCS = ""
-#DEFAULT_OUTPUT_IMAGES_GCS = ""
-#DEFAULT_OUTPUT_LABELS_GCS = ""
+
+# SQLite database file
+DB_FILE = "processed_images.db"
+BACKUP_INTERVAL = 1000  # Define how often to backup (e.g., every 100 images)
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -45,6 +45,49 @@ large_model = large_model.to(device)
 
 # Define GCS bucket
 bucket = client.bucket(bucket_name)
+
+# Initialize SQLite database connection
+def initialize_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS images (
+                        image_name TEXT PRIMARY KEY,
+                        processed BOOLEAN)''')
+    conn.commit()
+    return conn
+
+# Load processed images from SQLite
+def load_processed_images_db():
+    conn = initialize_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT image_name FROM images WHERE processed = 1")
+    processed_images = set(row[0] for row in cursor.fetchall())
+    conn.close()
+    return processed_images
+
+# Update SQLite with processed image
+def update_processed_images_db(image_name):
+    conn = initialize_db()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR REPLACE INTO images (image_name, processed) VALUES (?, 1)", (image_name,))
+    conn.commit()
+    conn.close()
+
+# Backup SQLite database to GCS in multiple locations
+def backup_db_to_gcs():
+    try:
+        # Define the first backup path
+        db_blob1 = bucket.blob("PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/processed_images.db")
+        db_blob1.upload_from_filename(DB_FILE)
+        logging.info("SQLite database backed up to GCS (logs folder).")
+        
+        # Define the additional backup path
+        db_blob2 = bucket.blob("nmfs_odp_pifsc/PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/database/processed_images.db")
+        db_blob2.upload_from_filename(DB_FILE)
+        logging.info("SQLite database backed up to GCS (database folder).")
+        
+    except Exception as e:
+        logging.error(f"Failed to backup SQLite database to GCS: {e}")
 
 # Function to read images directly from GCS and save to a temporary file
 def read_image_from_gcs_and_save(image_blob):
@@ -91,33 +134,11 @@ def save_yolo_format_labels(results, label_path, image_width, image_height):
             height = box.xywh[0][3] / image_height
             f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
 
-# Function to read processed images checkpoint from GCS
-def load_processed_images_checkpoint():
-    try:
-        blob = bucket.blob(CHECKPOINT_LOG_GCS_PATH)
-        if blob.exists():
-            data = blob.download_as_text()
-            return set(data.strip().split("\n"))
-    except Exception as e:
-        logging.error(f"Failed to load checkpoint log: {e}")
-    return set()
-
-# Function to update processed images checkpoint on GCS
-def update_processed_images_checkpoint(image_name):
-    try:
-        blob = bucket.blob(CHECKPOINT_LOG_GCS_PATH)
-        if blob.exists():
-            existing_data = blob.download_as_text() + "\n" + image_name
-        else:
-            existing_data = image_name
-        blob.upload_from_string(existing_data, content_type='text/plain')
-    except Exception as e:
-        logging.error(f"Failed to update checkpoint log: {e}")
-
 # Function to process images, run inference, and save results
 def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, confidence):
-    processed_images = load_processed_images_checkpoint()
+    processed_images = load_processed_images_db()
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
+    processed_count = 0  # Track how many images have been processed since last backup
     
     for blob in blobs:
         if not blob.name.endswith(('.jpg', '.png')) or blob.name in processed_images:
@@ -137,7 +158,10 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
             if image is None or image.shape[0] == 0 or image.shape[1] == 0:
                 logging.error(f"Invalid image dimensions for {img_name}")
                 continue
-
+            
+            # Update the processed images checkpoint before processing
+            update_processed_images_db(blob.name)
+            
             with st.spinner(f'Processing {img_name}...'):
                 # Use the temporary file path for inference
                 results = large_model.predict(temp_image_path, conf=confidence)
@@ -155,8 +179,10 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                 output_label_gcs_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt')}"
                 upload_to_gcs(label_path, output_label_gcs_path)
 
-            # Update the processed images checkpoint regardless of detections
-            update_processed_images_checkpoint(blob.name)
+            # Increment processed count and backup if needed
+            processed_count += 1
+            if processed_count % BACKUP_INTERVAL == 0:
+                backup_db_to_gcs()
 
         except cv2.error as e:
             logging.error(f"OpenCV error while processing {img_name}: {e}")
@@ -184,6 +210,9 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
     log_gcs_path = f"PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/yolo_fish_detection_{timestamp}.log"
     # Upload logs to GCS with the new path
     upload_log_to_gcs(log_stream, log_gcs_path)
+    
+    # Final backup after all processing is done
+    backup_db_to_gcs()
 
 # Streamlit UI
 st.title("🐟 Google Cloud Fish Detector - NODD App 3.0")
@@ -204,7 +233,7 @@ For more information:
 - Contact: Michael.Akridge@NOAA.gov
 - Visit the [GitHub repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/)
 """)
-confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.7)
+confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.65)
 
 # Use columns for better layout
 col1, col2 = st.columns(2)
