@@ -1,3 +1,7 @@
+#DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
+#DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
+#DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
+
 import streamlit as st
 import io
 import os
@@ -9,6 +13,7 @@ from PIL import Image
 import numpy as np
 import cv2
 import tempfile
+from datetime import datetime
 
 st.set_page_config(
     page_title="Fish Detector",
@@ -16,8 +21,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# Configure logging
-logging.basicConfig(filename='yolo_fish_detection.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging to use StreamHandler
+log_stream = io.StringIO()
+logging.basicConfig(stream=log_stream, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize Google Cloud Storage client
 client = storage.Client()
@@ -27,12 +33,6 @@ bucket_name = "nmfs_odp_pifsc"
 DEFAULT_INPUT_FOLDER_GCS = ""
 DEFAULT_OUTPUT_IMAGES_GCS = ""
 DEFAULT_OUTPUT_LABELS_GCS = ""
-DEFAULT_VERIFICATION_IMAGES_GCS = ""
-#DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
-#DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
-#DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
-#DEFAULT_VERIFICATION_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/verification/"
-
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -69,6 +69,15 @@ def upload_to_gcs(file_path, destination_blob_name):
     except Exception as e:
         logging.error(f"Failed to upload file {file_path} to GCS: {e}")
 
+# Function to upload logs to GCS
+def upload_log_to_gcs(log_data, log_gcs_path):
+    try:
+        blob = bucket.blob(log_gcs_path)
+        blob.upload_from_string(log_data.getvalue(), content_type='text/plain')
+        logging.info(f"Logs uploaded to {log_gcs_path}.")
+    except Exception as e:
+        logging.error(f"Failed to upload logs to GCS: {e}")
+
 # Function to save labels in YOLO format
 def save_yolo_format_labels(results, label_path, image_width, image_height):
     with open(label_path, 'w') as f:
@@ -81,11 +90,9 @@ def save_yolo_format_labels(results, label_path, image_width, image_height):
             height = box.xywh[0][3] / image_height
             f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
 
-# Function to process images, run inference, save results, and display first 5 detections
-def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5):
+# Function to process images, run inference, and save results
+def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, confidence):
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
-    processed_count = 0
-    display_count = 0
     
     for blob in blobs:
         if not blob.name.endswith(('.jpg', '.png')):
@@ -123,16 +130,6 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                 output_label_gcs_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt')}"
                 upload_to_gcs(label_path, output_label_gcs_path)
 
-                # Display the detections (Limit to max_display_count)
-                if display_count < max_display_count:
-                    original_img = Image.open(temp_image_path)
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.image(original_img, caption=f"Original Image - {img_name}", use_column_width=True)
-                    with col2:
-                        st.write(f"Detections for {img_name} displayed.")
-                    display_count += 1
-
         except cv2.error as e:
             logging.error(f"OpenCV error while processing {img_name}: {e}")
             st.error(f"Failed to process {img_name}: {e}")
@@ -147,20 +144,16 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                 os.remove(temp_image_path)
 
     st.success("🎉 Dataset preparation complete!")
-    display_verification_images(verification_images_gcs)
-
-# Function to display verification images from GCS
-def display_verification_images(verification_images_gcs):
-    st.write("Verification Images:")
-    blobs = client.list_blobs(bucket_name, prefix=verification_images_gcs)
-    for blob in blobs:
-        if blob.name.endswith(('.jpg', '.png')):
-            img = read_image_from_gcs(blob)
-            if img is not None:
-                st.image(img, caption=os.path.basename(blob.name), use_column_width=True)
+    
+    # Generate a timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Define the GCS log path with timestamp
+    log_gcs_path = f"PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/yolo_fish_detection_{timestamp}.log"
+    # Upload logs to GCS with the new path
+    upload_log_to_gcs(log_stream, log_gcs_path)
 
 # Streamlit UI
-st.title("🐟 Google Cloud Fish Detector - NODD App")
+st.title("🐟 Google Cloud Fish Detector - NODD App 20241025")
 
 # Add description with links to the repository and model
 st.markdown("""
@@ -172,22 +165,21 @@ This application leverages advanced object detection models to identify fish in 
 """)
 
 # Sidebar configuration
-st.sidebar.title("🐟 Fish Detection Settings v2")
-confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.35)
+st.sidebar.title("🐟 Fish Detection Settings")
+confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.5)
 
 # Use columns for better layout
 col1, col2 = st.columns(2)
 with col1:
     input_folder_gcs = st.text_input("📂 Input Folder GCS Path", DEFAULT_INPUT_FOLDER_GCS)
-    output_images_gcs = st.text_input("🖼️ Output Images GCS Path", DEFAULT_OUTPUT_IMAGES_GCS)
 with col2:
+    output_images_gcs = st.text_input("🖼️ Output Images GCS Path", DEFAULT_OUTPUT_IMAGES_GCS)
     output_labels_gcs = st.text_input("📝 Output Labels GCS Path", DEFAULT_OUTPUT_LABELS_GCS)
-    verification_images_gcs = st.text_input("✅ Verification Images GCS Path", DEFAULT_VERIFICATION_IMAGES_GCS)
 
 # Start processing button
 with st.expander("🔄 Start Processing"):
     if st.button("🚀 Process Images"):
-        process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, verification_images_gcs, confidence, max_display_count=5)
+        process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, confidence)
 
 # Apply custom CSS for improved styling
 st.markdown("""
