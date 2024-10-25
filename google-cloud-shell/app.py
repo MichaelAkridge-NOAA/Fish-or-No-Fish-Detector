@@ -26,18 +26,14 @@ client = storage.Client()
 bucket_name = "nmfs_odp_pifsc"
 
 # Default input and output GCS directories
-#DEFAULT_INPUT_FOLDER_GCS = ""
-#DEFAULT_OUTPUT_IMAGES_GCS = ""
-#DEFAULT_OUTPUT_LABELS_GCS = ""
 DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
 DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
 DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
 CHECKPOINT_LOG_GCS_PATH = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/processed_images.txt"
-
-#DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/raw/"
-#DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/images/"
-#DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/labels/"
-#CHECKPOINT_LOG_GCS_PATH = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/small_test_set/test/logs/processed_images.txt"
+# Default input and output GCS directories
+#DEFAULT_INPUT_FOLDER_GCS = ""
+#DEFAULT_OUTPUT_IMAGES_GCS = ""
+#DEFAULT_OUTPUT_LABELS_GCS = ""
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -158,9 +154,9 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
 
                 output_label_gcs_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt')}"
                 upload_to_gcs(label_path, output_label_gcs_path)
-                
-                # Update the processed images checkpoint
-                update_processed_images_checkpoint(blob.name)
+
+            # Update the processed images checkpoint regardless of detections
+            update_processed_images_checkpoint(blob.name)
 
         except cv2.error as e:
             logging.error(f"OpenCV error while processing {img_name}: {e}")
@@ -171,9 +167,14 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
             st.error(f"Failed to process {img_name}")
 
         finally:
-            # Remove the temporary file to free up space
+            # Remove temporary files to free up space
             if os.path.exists(temp_image_path):
                 os.remove(temp_image_path)
+            
+            # Remove temporary label file if it exists
+            temp_label_path = temp_image_path.replace(".jpg", ".txt")
+            if os.path.exists(temp_label_path):
+                os.remove(temp_label_path)
 
     st.success("🎉 Dataset preparation complete!")
     
@@ -185,7 +186,7 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
     upload_log_to_gcs(log_stream, log_gcs_path)
 
 # Streamlit UI
-st.title("🐟 Google Cloud Fish Detector - NODD App v2")
+st.title("🐟 Google Cloud Fish Detector - NODD App 3.0")
 
 # Add description with links to the repository and model
 st.markdown("""
