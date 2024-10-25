@@ -166,7 +166,7 @@ This application leverages advanced object detection models to identify fish in 
 
 # Sidebar configuration
 st.sidebar.title("🐟 Fish Detection Settings")
-confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.5)
+confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.70)
 
 # Use columns for better layout
 col1, col2 = st.columns(2)
