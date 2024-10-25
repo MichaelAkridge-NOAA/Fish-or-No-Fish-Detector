@@ -24,10 +24,10 @@ client = storage.Client()
 bucket_name = "nmfs_odp_pifsc"
 
 # Default input and output GCS directories
-DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
-DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
-DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
-DEFAULT_VERIFICATION_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/verification/"
+DEFAULT_INPUT_FOLDER_GCS = ""
+DEFAULT_OUTPUT_IMAGES_GCS = ""
+DEFAULT_OUTPUT_LABELS_GCS = ""
+DEFAULT_VERIFICATION_IMAGES_GCS = ""
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
