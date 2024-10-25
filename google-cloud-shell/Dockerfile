@@ -17,11 +17,17 @@ WORKDIR /app
 # Download the YOLO model
 RUN wget -O /app/yolov8n_fish_trained.pt https://storage.googleapis.com/nmfs_odp_pifsc/PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/models/yolov8n_fish_trained_small_dataset/yolov8n_fish_trained.pt
 
+# Attempt to download the SQLite database if it exists
+RUN wget -O /app/processed_images.db https://storage.googleapis.com/nmfs_odp_pifsc/PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/database/processed_images.db || echo "Database not found, proceeding without it."
+
 # Copy the app code
 COPY app.py /app/app.py
 
 # Expose Streamlit default port
 EXPOSE 8501
+
+# Define a volume to persist the SQLite database
+VOLUME ["/app"]
 
 # Run the Streamlit app
 ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
