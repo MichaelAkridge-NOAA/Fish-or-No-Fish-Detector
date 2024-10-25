@@ -1,14 +1,14 @@
 name: Build and Push Image to Docker Hub
 on:
   workflow_dispatch: # Allow manual triggering from GitHub Actions
-  push:
-    branches:
-      - MOUSS_2016 # Only trigger automatically on pushes to MOUSS_2016 branch
+#  push:
+#    branches:
+#      - MOUSS_2016 # Only trigger automatically on pushes to MOUSS_2016 branch
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      VERSION: 5.0.0
+      VERSION: 6.0.0
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

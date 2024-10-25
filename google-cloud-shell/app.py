@@ -226,12 +226,12 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
     backup_db_to_gcs()
 
 # Streamlit UI
-st.title("🐟 Google Cloud Fish Detector - NODD App 3.0")
+st.title("🐟 Google Cloud Fish Detector - NODD App 6.0")
 
 # Add description with links to the repository and model
 st.markdown("""
 **Welcome to the Google Cloud Fish Detector - NODD App!**
-This application leverages advanced object detection models to identify fish in images stored on Google Cloud. 
+This application used a pre-trained fish object detection model to identify fish in images stored on Google Cloud. 
 
 🔗 **[GitHub Repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/tree/MOUSS_2016/google-cloud-shell)**  
 🧠 **[YOLOv11 Fish Detector Model on Hugging Face](https://huggingface.co/akridge/yolo11-fish-detector-grayscale)**
