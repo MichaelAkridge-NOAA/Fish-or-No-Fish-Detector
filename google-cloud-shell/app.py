@@ -33,7 +33,7 @@ DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detecti
 
 # SQLite database file
 DB_FILE = "processed_images.db"
-BACKUP_INTERVAL = 1000  # Define how often to backup (e.g., every 100 images)
+BACKUP_INTERVAL = 1000  # Define how often to backup (e.g., every 1000 images)
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -139,7 +139,12 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
     processed_images = load_processed_images_db()
     blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
     processed_count = 0  # Track how many images have been processed since last backup
+    detections_count = 0  # Track how many images had detections
     
+    # Streamlit UI to display counters
+    processed_images_placeholder = st.empty()
+    images_with_detections_placeholder = st.empty()
+
     for blob in blobs:
         if not blob.name.endswith(('.jpg', '.png')) or blob.name in processed_images:
             continue
@@ -161,12 +166,15 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
             
             # Update the processed images checkpoint before processing
             update_processed_images_db(blob.name)
-            
+            processed_count += 1  # Increment processed count
+
             with st.spinner(f'Processing {img_name}...'):
                 # Use the temporary file path for inference
                 results = large_model.predict(temp_image_path, conf=confidence)
 
             if results[0].boxes is not None and len(results[0].boxes) > 0:
+                detections_count += 1  # Increment detections count
+                
                 # Save the original image to GCS (no bounding boxes overlaid)
                 output_image_gcs_path = f"{output_images_gcs}{img_name}"
                 upload_to_gcs(temp_image_path, output_image_gcs_path)
@@ -180,9 +188,12 @@ def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_g
                 upload_to_gcs(label_path, output_label_gcs_path)
 
             # Increment processed count and backup if needed
-            processed_count += 1
             if processed_count % BACKUP_INTERVAL == 0:
                 backup_db_to_gcs()
+
+            # Update the UI counters
+            processed_images_placeholder.metric("Total Processed Images", processed_count)
+            images_with_detections_placeholder.metric("Images with Detections", detections_count)
 
         except cv2.error as e:
             logging.error(f"OpenCV error while processing {img_name}: {e}")
@@ -233,7 +244,7 @@ For more information:
 - Contact: Michael.Akridge@NOAA.gov
 - Visit the [GitHub repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/)
 """)
-confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.65)
+confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.7)
 
 # Use columns for better layout
 col1, col2 = st.columns(2)
