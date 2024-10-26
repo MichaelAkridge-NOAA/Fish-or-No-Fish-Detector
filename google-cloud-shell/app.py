@@ -11,6 +11,7 @@ import cv2
 import tempfile
 from datetime import datetime
 import sqlite3
+import uuid
 
 st.set_page_config(
     page_title="Fish Detector",
@@ -33,7 +34,7 @@ DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detecti
 
 # SQLite database file
 DB_FILE = "processed_images.db"
-BACKUP_INTERVAL = 1000  # Define how often to backup (e.g., every 1000 images)
+BACKUP_INTERVAL = 1000  # Sync the database every 1,000 images processed
 
 # Check if CUDA is available and load the large model (YOLOv8x) to CUDA if possible
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -50,9 +51,19 @@ bucket = client.bucket(bucket_name)
 def initialize_db():
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    # Update the table schema to store additional details
     cursor.execute('''CREATE TABLE IF NOT EXISTS images (
                         image_name TEXT PRIMARY KEY,
-                        processed BOOLEAN)''')
+                        processed BOOLEAN,
+                        detections BOOLEAN,
+                        confidence REAL,
+                        processed_timestamp TEXT,
+                        job_id TEXT,
+                        batch_id INTEGER)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS jobs (
+                        job_id TEXT PRIMARY KEY,
+                        total_images INTEGER,
+                        completed_batches INTEGER)''')
     conn.commit()
     return conn
 
@@ -60,29 +71,74 @@ def initialize_db():
 def load_processed_images_db():
     conn = initialize_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT image_name FROM images WHERE processed = 1")
-    processed_images = set(row[0] for row in cursor.fetchall())
+    cursor.execute("SELECT image_name, detections FROM images WHERE processed = 1")
+    processed_images = {row[0]: row[1] for row in cursor.fetchall()}
     conn.close()
     return processed_images
 
-# Update SQLite with processed image
-def update_processed_images_db(image_name):
+# Restore cumulative counters from the database
+def restore_cumulative_counters():
     conn = initialize_db()
     cursor = conn.cursor()
-    cursor.execute("INSERT OR REPLACE INTO images (image_name, processed) VALUES (?, 1)", (image_name,))
+    cursor.execute("SELECT COUNT(*), SUM(detections) FROM images WHERE processed = 1")
+    processed_count, detections_count = cursor.fetchone()
+    conn.close()
+    return processed_count or 0, detections_count or 0
+
+# Scan and create 10 dynamic batches
+def scan_and_create_batches(input_folder_gcs):
+    blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
+    image_list = [blob.name for blob in blobs if blob.name.endswith(('.jpg', '.png'))]
+    
+    conn = initialize_db()
+    cursor = conn.cursor()
+
+    # Retrieve unprocessed images
+    cursor.execute("SELECT image_name FROM images WHERE processed = 0")
+    existing_unprocessed = set(row[0] for row in cursor.fetchall())
+    unprocessed_images = [img for img in image_list if img not in existing_unprocessed]
+
+    total_unprocessed = len(unprocessed_images)
+    if total_unprocessed == 0:
+        st.warning("No unprocessed images found.")
+        return
+
+    # Split into 10 even batches
+    batch_size = max(1, total_unprocessed // 10)
+    batches = [unprocessed_images[i:i + batch_size] for i in range(0, total_unprocessed, batch_size)]
+    
+    # Create a new job ID
+    job_id = str(uuid.uuid4())
+    
+    # Save each image to the database with its batch_id
+    for batch_id, batch in enumerate(batches):
+        for image_name in batch:
+            cursor.execute("INSERT OR IGNORE INTO images (image_name, processed, job_id, batch_id) VALUES (?, 0, ?, ?)",
+                           (image_name, job_id, batch_id))
+    
+    conn.commit()
+    conn.close()
+
+    st.success(f"Job created with ID {job_id}, Total Unprocessed Images: {total_unprocessed}, Batches: {len(batches)}")
+
+# Update SQLite with processed image and details
+def update_processed_images_db(image_name, detections, confidence):
+    conn = initialize_db()
+    cursor = conn.cursor()
+    processed_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("INSERT OR REPLACE INTO images (image_name, processed, detections, confidence, processed_timestamp) VALUES (?, 1, ?, ?, ?)",
+                   (image_name, detections, confidence, processed_timestamp))
     conn.commit()
     conn.close()
 
 # Backup SQLite database to GCS in multiple locations
 def backup_db_to_gcs():
     try:
-        # Define the first backup path
         db_blob1 = bucket.blob("PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/processed_images.db")
         db_blob1.upload_from_filename(DB_FILE)
         logging.info("SQLite database backed up to GCS (logs folder).")
         
-        # Define the additional backup path
-        db_blob2 = bucket.blob("nmfs_odp_pifsc/PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/database/processed_images.db")
+        db_blob2 = bucket.blob("PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/database/processed_images.db")
         db_blob2.upload_from_filename(DB_FILE)
         logging.info("SQLite database backed up to GCS (database folder).")
         
@@ -94,8 +150,6 @@ def read_image_from_gcs_and_save(image_blob):
     try:
         img_bytes = image_blob.download_as_bytes()
         img = Image.open(io.BytesIO(img_bytes))
-
-        # Create a temporary file that will be automatically deleted
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
             img.save(temp_file.name)
             temp_file_path = temp_file.name
@@ -104,134 +158,94 @@ def read_image_from_gcs_and_save(image_blob):
         logging.error(f"Failed to read image {image_blob.name}: {e}")
         return None
 
-# Function to upload files to GCS
-def upload_to_gcs(file_path, destination_blob_name):
-    try:
-        blob = bucket.blob(destination_blob_name)
-        blob.upload_from_filename(file_path)
-        logging.info(f"File {file_path} uploaded to {destination_blob_name}.")
-    except Exception as e:
-        logging.error(f"Failed to upload file {file_path} to GCS: {e}")
-
-# Function to upload logs to GCS
-def upload_log_to_gcs(log_data, log_gcs_path):
-    try:
-        blob = bucket.blob(log_gcs_path)
-        blob.upload_from_string(log_data.getvalue(), content_type='text/plain')
-        logging.info(f"Logs uploaded to {log_gcs_path}.")
-    except Exception as e:
-        logging.error(f"Failed to upload logs to GCS: {e}")
-
-# Function to save labels in YOLO format
-def save_yolo_format_labels(results, label_path, image_width, image_height):
-    with open(label_path, 'w') as f:
-        for box in results[0].boxes:
-            class_id = 0  # Assuming 'fish' is class 0
-            # Normalize coordinates: YOLO format expects (class_id, x_center, y_center, width, height)
-            x_center = box.xywh[0][0] / image_width
-            y_center = box.xywh[0][1] / image_height
-            width = box.xywh[0][2] / image_width
-            height = box.xywh[0][3] / image_height
-            f.write(f"{class_id} {x_center} {y_center} {width} {height}\n")
-
 # Function to process images, run inference, and save results
-def process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, confidence):
-    processed_images = load_processed_images_db()
-    blobs = client.list_blobs(bucket_name, prefix=input_folder_gcs)
-    processed_count = 0  # Track how many images have been processed since last backup
-    detections_count = 0  # Track how many images had detections
+def process_batch(job_id, batch_id, output_images_gcs, output_labels_gcs, confidence):
+    conn = initialize_db()
+    cursor = conn.cursor()
+
+    # Get the list of images for the batch
+    cursor.execute("SELECT image_name FROM images WHERE job_id = ? AND batch_id = ? AND processed = 0", (job_id, batch_id))
+    image_names = [row[0] for row in cursor.fetchall()]
     
+    if not image_names:
+        st.warning("No images to process for this batch.")
+        return
+
+    # Load cumulative counters
+    cumulative_processed, cumulative_detections = restore_cumulative_counters()
+    session_processed = 0
+    session_detections = 0
+    sync_count = 0
+
     # Streamlit UI to display counters
     processed_images_placeholder = st.empty()
     images_with_detections_placeholder = st.empty()
 
-    for blob in blobs:
-        if not blob.name.endswith(('.jpg', '.png')) or blob.name in processed_images:
-            continue
-        
-        # Read and save the image to a temporary file, then pass the path to the model
+    for image_name in image_names:
+        blob = bucket.blob(image_name)
         temp_image_path = read_image_from_gcs_and_save(blob)
         if temp_image_path is None:
-            logging.error(f"Failed to download and save {blob.name}")
             continue
         
-        img_name = os.path.basename(blob.name)
-        
         try:
-            # Check if the image is valid
             image = cv2.imread(temp_image_path)
             if image is None or image.shape[0] == 0 or image.shape[1] == 0:
-                logging.error(f"Invalid image dimensions for {img_name}")
                 continue
             
-            # Update the processed images checkpoint before processing
-            update_processed_images_db(blob.name)
-            processed_count += 1  # Increment processed count
+            results = large_model.predict(temp_image_path, conf=confidence)
+            has_detections = results[0].boxes is not None and len(results[0].boxes) > 0
+            detected_confidence = max([box.conf[0] for box in results[0].boxes]) if has_detections else 0.0
+            
+            # Track session stats
+            session_processed += 1
+            sync_count += 1
+            if has_detections:
+                session_detections += 1
 
-            with st.spinner(f'Processing {img_name}...'):
-                # Use the temporary file path for inference
-                results = large_model.predict(temp_image_path, conf=confidence)
+            # Update the database for each image processed
+            update_processed_images_db(image_name, has_detections, detected_confidence)
 
-            if results[0].boxes is not None and len(results[0].boxes) > 0:
-                detections_count += 1  # Increment detections count
-                
-                # Save the original image to GCS (no bounding boxes overlaid)
-                output_image_gcs_path = f"{output_images_gcs}{img_name}"
+            # Save results to GCS if there are detections
+            if has_detections:
+                output_image_gcs_path = f"{output_images_gcs}{os.path.basename(image_name)}"
                 upload_to_gcs(temp_image_path, output_image_gcs_path)
 
-                # Save labels in YOLO format and upload to GCS
                 label_path = temp_image_path.replace(".jpg", ".txt")
                 image_height, image_width, _ = image.shape
                 save_yolo_format_labels(results, label_path, image_width, image_height)
-
-                output_label_gcs_path = f"{output_labels_gcs}{img_name.replace('.jpg', '.txt')}"
+                output_label_gcs_path = f"{output_labels_gcs}{os.path.basename(image_name).replace('.jpg', '.txt')}"
                 upload_to_gcs(label_path, output_label_gcs_path)
 
-            # Increment processed count and backup if needed
-            if processed_count % BACKUP_INTERVAL == 0:
+            # Sync database every 1,000 images
+            if sync_count >= BACKUP_INTERVAL:
+                conn.commit()
                 backup_db_to_gcs()
+                sync_count = 0
 
-            # Update the UI counters
-            processed_images_placeholder.metric("Total Processed Images", processed_count)
-            images_with_detections_placeholder.metric("Images with Detections", detections_count)
-
-        except cv2.error as e:
-            logging.error(f"OpenCV error while processing {img_name}: {e}")
-            st.error(f"Failed to process {img_name}: {e}")
+            # Update Streamlit UI counters
+            processed_images_placeholder.metric("Processed Images (Total / Session)", f"{cumulative_processed + session_processed} / {session_processed}")
+            images_with_detections_placeholder.metric("Images with Detections (Total / Session)", f"{cumulative_detections + session_detections} / {session_detections}")
 
         except Exception as e:
-            logging.error(f"Failed to process {img_name}: {e}")
-            st.error(f"Failed to process {img_name}")
+            logging.error(f"Failed to process {image_name}: {e}")
 
         finally:
-            # Remove temporary files to free up space
             if os.path.exists(temp_image_path):
                 os.remove(temp_image_path)
-            
-            # Remove temporary label file if it exists
-            temp_label_path = temp_image_path.replace(".jpg", ".txt")
-            if os.path.exists(temp_label_path):
-                os.remove(temp_label_path)
-
-    st.success("🎉 Dataset preparation complete!")
     
-    # Generate a timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # Define the GCS log path with timestamp
-    log_gcs_path = f"PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/yolo_fish_detection_{timestamp}.log"
-    # Upload logs to GCS with the new path
-    upload_log_to_gcs(log_stream, log_gcs_path)
-    
-    # Final backup after all processing is done
+    # Final sync and backup
+    conn.commit()
     backup_db_to_gcs()
-
-# Streamlit UI
-st.title("🐟 Google Cloud Fish Detector - NODD App 6.0")
+    conn.close()
+    st.success("Batch processing complete.")
+    
+# Streamlit UI Elements
+st.title("🐟 Google Cloud Fish Detector - NODD App 3.0")
 
 # Add description with links to the repository and model
 st.markdown("""
 **Welcome to the Google Cloud Fish Detector - NODD App!**
-This application used a pre-trained fish object detection model to identify fish in images stored on Google Cloud. 
+This application leverages advanced object detection models to identify fish in images stored on Google Cloud. 
 
 🔗 **[GitHub Repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/tree/MOUSS_2016/google-cloud-shell)**  
 🧠 **[YOLOv11 Fish Detector Model on Hugging Face](https://huggingface.co/akridge/yolo11-fish-detector-grayscale)**
@@ -244,37 +258,24 @@ For more information:
 - Contact: Michael.Akridge@NOAA.gov
 - Visit the [GitHub repository](https://github.com/MichaelAkridge-NOAA/Fish-or-No-Fish-Detector/)
 """)
-confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.7)
+confidence = st.sidebar.slider("Detection Confidence Threshold", 0.0, 1.0, 0.65)
 
-# Use columns for better layout
-col1, col2 = st.columns(2)
-with col1:
-    input_folder_gcs = st.text_input("📂 Input Folder GCS Path", DEFAULT_INPUT_FOLDER_GCS)
-with col2:
-    output_images_gcs = st.text_input("🖼️ Output Images GCS Path", DEFAULT_OUTPUT_IMAGES_GCS)
-    output_labels_gcs = st.text_input("📝 Output Labels GCS Path", DEFAULT_OUTPUT_LABELS_GCS)
+# Job Management UI
+if st.sidebar.button("Scan & Divide Unprocessed Into 10 Batches"):
+    scan_and_create_batches(DEFAULT_INPUT_FOLDER_GCS)
 
-# Start processing button
-with st.expander("🔄 Start Processing"):
-    if st.button("🚀 Process Images"):
-        process_images_from_gcs(input_folder_gcs, output_images_gcs, output_labels_gcs, confidence)
+# Load existing job IDs from the database
+conn = initialize_db()
+cursor = conn.cursor()
+cursor.execute("SELECT DISTINCT job_id FROM images")
+job_ids = [row[0] for row in cursor.fetchall()]
+conn.close()
 
-# Apply custom CSS for improved styling
-st.markdown("""
-    <style>
-    .stButton>button {
-        width: 100%;
-        padding: 10px;
-        border-radius: 5px;
-        font-size: 18px;
-        font-weight: bold;
-        background-color: #007BFF;
-        color: white;
-        border: none;
-        cursor: pointer;
-    }
-    .stButton>button:hover {
-        background-color: #0056b3;
-    }
-    </style>
-""", unsafe_allow_html=True)
+if job_ids:
+    job_id = st.sidebar.selectbox("Select Job ID", job_ids)
+    batch_id = st.sidebar.number_input("Batch ID (0-9)", min_value=0, max_value=9)
+
+    if st.sidebar.button("Start Processing Selected Batch"):
+        process_batch(job_id, batch_id, DEFAULT_OUTPUT_IMAGES_GCS, DEFAULT_OUTPUT_LABELS_GCS, confidence)
+else:
+    st.sidebar.warning("No jobs available. Scan for unprocessed images to create a new job.")
