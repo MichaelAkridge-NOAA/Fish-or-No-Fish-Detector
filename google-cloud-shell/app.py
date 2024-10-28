@@ -29,8 +29,8 @@ bucket_name = "nmfs_odp_pifsc"
 
 # Default input and output GCS directories
 DEFAULT_INPUT_FOLDER_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/raw/"
-DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/images/"
-DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/labels/"
+DEFAULT_OUTPUT_IMAGES_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/datasetv2/images/"
+DEFAULT_OUTPUT_LABELS_GCS = "PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/datasetv2/labels/"
 
 # SQLite database file
 DB_FILE = "processed_images.db"
@@ -134,11 +134,11 @@ def update_processed_images_db(image_name, detections, confidence):
 # Backup SQLite database to GCS in multiple locations
 def backup_db_to_gcs():
     try:
-        db_blob1 = bucket.blob("PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/logs/processed_images.db")
+        db_blob1 = bucket.blob("PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/datasetv2/logs/processed_images.db")
         db_blob1.upload_from_filename(DB_FILE)
         logging.info("SQLite database backed up to GCS (logs folder).")
         
-        db_blob2 = bucket.blob("PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/database/processed_images.db")
+        db_blob2 = bucket.blob("PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/datasets/large_2016_dataset/datasetv2/database/processed_images.db")
         db_blob2.upload_from_filename(DB_FILE)
         logging.info("SQLite database backed up to GCS (database folder).")
         
