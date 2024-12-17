@@ -15,7 +15,7 @@ RUN pip install streamlit ultralytics google-cloud-storage pillow opencv-python-
 WORKDIR /app
 
 # Download the YOLO model
-RUN wget -O /app/yolov8n_fish_trained.pt https://storage.googleapis.com/nmfs_odp_pifsc/PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/models/yolov8n_fish_trained_small_dataset/yolov8n_fish_trained.pt
+RUN wget -O /app/yolov8n_fish_trained.pt https://storage.googleapis.com/nmfs_odp_pifsc/PIFSC/ESD/ARP/pifsc-ai-data-repository/fish-detection/MOUSS_fish_detection_v1/models/yolo11n_fish_lgds_2016/yolo11n_fish_2016_v1.pt
 
 # Copy the app code and startup script
 COPY app.py /app/app.py
