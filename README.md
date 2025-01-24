@@ -56,9 +56,6 @@ Is there a fish 🐟 or not?
     pip install -r requirements.txt
     ```
 3. Download one of the pre-trained models and save it in the `./models/` directory.
-- [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems/blob/main/best.pt)
-- Small dataset model: https://huggingface.co/akridge/yolo8-fish-detector-grayscale
-- Large dataset model: https://huggingface.co/akridge/yolo8-fish-detector-grayscale/tree/yolo8-fish-detector-grayscale-lgds
 
 ### Running the App
 
@@ -74,10 +71,6 @@ streamlit run app.py
 #### Read More/How to:
 - [Persistant Tracking](https://docs.ultralytics.com/modes/track/#persisting-tracks-loop)
 - [Plot Tracks over time](https://docs.ultralytics.com/modes/track/#plotting-tracks-over-time)
-
-## Model Links:
-- Small dataset model: https://huggingface.co/akridge/yolo8-fish-detector-grayscale
-- Large dataset model: https://huggingface.co/akridge/yolo8-fish-detector-grayscale/tree/yolo8-fish-detector-grayscale-lgds
 
 ## Model Details
 Model trained to detect fish in underwater Grayscale Imagery using the YOLOv8n architecture for performance. The model leverages unsupervised learning techniques to learn patterns and identify fish without relying on fully labeled datasets.Uses the [FathomNet VME Model](https://huggingface.co/FathomNet/vulnerable-marine-ecosystems) for object detection in marine ecosystems, specifically focusing on corals, crinoids, sponges, and fish in its unsupervised learning method. It is built on top of the [Ultralytics YOLOv8x model](https://github.com/ultralytics/ultralytics/), providing fast and accurate object detection capabilities.
