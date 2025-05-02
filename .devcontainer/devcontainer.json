@@ -1,5 +1,5 @@
 {
-  "name": "Fish Arcade",
+  "name": "Yes Fish / No Fish",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
   // run once per Codespace: cd into game dir, install deps, quick smoke-run
