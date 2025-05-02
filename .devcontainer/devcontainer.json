@@ -1,10 +1,27 @@
+// .devcontainer/devcontainer.json
 {
-  "name": "Yes Fish / No Fish",
+  "name": "Yes/No Fish – Codespace",
+
+  // No custom Dockerfile; use Microsoft’s stock Python 3.11 image
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
-  // run once per Codespace: cd into game dir, install deps, quick smoke-run
-  "postCreateCommand": "cd .devcontainer/yes-no-fish && pip install -r requirements.txt && python app.py",
+  // Debian packages + Python deps (runs once when the Codespace is created)
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y xvfb fluxbox novnc websockify && pip install -r .devcontainer/yes-no-fish/requirements.txt",
 
-  // run on every restart: cd and run the game
-  "postStartCommand":  "cd .devcontainer/yes-no-fish && python app.py"
+  // === Run our start script (make sure it’s executable) ===
+  "postStartCommand": "chmod +x .devcontainer/start-xvnc.sh && /bin/bash .devcontainer/start-xvnc.sh",
+
+  // Optional: auto-open a terminal
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+
+  // Auto-forward the noVNC web port so you don’t have to click “Forward Port”
+  "forwardPorts": [6080],
+  "portsAttributes": {
+    "6080": {
+      "label": "Fish Arcade (noVNC)",
+      "onAutoForward": "openPreview"    // open in preview tab
+    }
+  }
 }
