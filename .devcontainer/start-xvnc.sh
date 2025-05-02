@@ -2,6 +2,8 @@
 set -e
 
 export DISPLAY=:99
+export SDL_VIDEODRIVER=x11      # existing line – X window goes to Xvfb
+export SDL_AUDIODRIVER=dummy    # 👈 add this one line – silence mixer errors
 GAME_DIR=".devcontainer/yes-no-fish"
 
 # ── 1. Launch virtual X server & lightweight window manager once ──────────

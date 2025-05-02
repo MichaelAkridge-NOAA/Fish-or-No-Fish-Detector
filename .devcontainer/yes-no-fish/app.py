@@ -234,7 +234,13 @@ class FishRound:
 # ──────────────────────── Main App & Menus ────────────────────────
 class App:
     def __init__(self):
-        pygame.init(); pygame.mixer.init()
+        pygame.init()
+        # ── Safely initialize mixer (skip if no audio device) ──────────
+        try:
+            pygame.mixer.init()
+        except pygame.error:
+            print("⚠️  Audio disabled – SDL dummy driver in use.")
+            # mixer functions will silently no-op; the game keeps running
         self.sc = pygame.display.set_mode((CFG.SCREEN_W, CFG.SCREEN_H))
         pygame.display.set_caption("Yes-Fish / No-Fish Arcade")
         self.ck = pygame.time.Clock()
