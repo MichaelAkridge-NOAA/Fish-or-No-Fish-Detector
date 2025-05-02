@@ -1,0 +1,13 @@
+{
+  "name": "Yes-Fish / No-Fish",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+
+  // <── Codespace’s working directory is now the game folder itself
+  "workspaceFolder": "/workspace/.devcontainer/yes-no-fish",
+
+  // Runs once, when the Codespace is created
+  "postCreateCommand": "pip install -r requirements.txt && python app.py",
+
+  // Runs on every subsequent start / reload
+  "postStartCommand":   "python app.py"
+}
