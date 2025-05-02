@@ -1,16 +1,11 @@
 // .devcontainer/devcontainer.json
 {
-  "name": "Fish Arcade – Codespace (noVNC)",
+  "name": "Fish – Codespace ",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
-  // Runs once when the Codespace is first created
-  "postCreateCommand": [
-    "sudo apt-get update",
-    "sudo apt-get install -y xvfb fluxbox x11vnc novnc websockify",
-    "pip install -r .devcontainer/yes-no-fish/requirements.txt"
-  ],
+  // ONE shell line, using && between commands
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y xvfb fluxbox x11vnc novnc websockify && pip install -r .devcontainer/yes-no-fish/requirements.txt",
 
-  // Runs on every start / reload
   "postStartCommand": "chmod +x .devcontainer/start-xvnc.sh && /bin/bash .devcontainer/start-xvnc.sh",
 
   "settings": {
@@ -20,7 +15,7 @@
   "forwardPorts": [6080],
   "portsAttributes": {
     "6080": {
-      "label": "Fish Arcade",
+      "label": "Fish",
       "onAutoForward": "openPreview",
       "visibility": "public",
       "protocol": "http",
