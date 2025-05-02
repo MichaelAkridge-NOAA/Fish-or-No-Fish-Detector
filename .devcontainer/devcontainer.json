@@ -1,27 +1,26 @@
+// .devcontainer/devcontainer.json
 {
-  "name": "Fish– Codespace ",
+  "name": "Fish Arcade – Codespace (noVNC)",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
-  // ---------- runs ONCE per Codespace creation ----------
+  // Runs once when the Codespace is first created
   "postCreateCommand": [
-    // Debian GUI / VNC stack
     "sudo apt-get update",
     "sudo apt-get install -y xvfb fluxbox x11vnc novnc websockify",
-    // Python deps for the game
     "pip install -r .devcontainer/yes-no-fish/requirements.txt"
   ],
 
-  // ---------- runs EVERY start / reload ----------
+  // Runs on every start / reload
   "postStartCommand": "chmod +x .devcontainer/start-xvnc.sh && /bin/bash .devcontainer/start-xvnc.sh",
 
-  // Default shell
-  "settings": { "terminal.integrated.shell.linux": "/bin/bash" },
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
 
-  // Auto-forward noVNC and open preview
   "forwardPorts": [6080],
   "portsAttributes": {
     "6080": {
-      "label": "Fish",
+      "label": "Fish Arcade",
       "onAutoForward": "openPreview",
       "visibility": "public",
       "protocol": "http",
