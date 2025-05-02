@@ -1,30 +1,27 @@
 {
-  "name": "Yes/No fish – Codespace",
-  // Use Microsoft’s stock Python dev-container
+  "name": "Fish– Codespace ",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
 
-  // 1. First-time build: apt + pip
+  // ---------- runs ONCE per Codespace creation ----------
   "postCreateCommand": [
+    // Debian GUI / VNC stack
     "sudo apt-get update",
-    // GUI + VNC stack
     "sudo apt-get install -y xvfb fluxbox x11vnc novnc websockify",
-    // project deps (requirements.txt lives beside app.py)
+    // Python deps for the game
     "pip install -r .devcontainer/yes-no-fish/requirements.txt"
   ],
 
-  // 2. Every (re)start: launch virtual X, VNC, websockify, then the game
+  // ---------- runs EVERY start / reload ----------
   "postStartCommand": "chmod +x .devcontainer/start-xvnc.sh && /bin/bash .devcontainer/start-xvnc.sh",
 
-  // Terminal defaults
-  "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash"
-  },
+  // Default shell
+  "settings": { "terminal.integrated.shell.linux": "/bin/bash" },
 
-  // 3. Auto-forward noVNC port and open preview
+  // Auto-forward noVNC and open preview
   "forwardPorts": [6080],
   "portsAttributes": {
     "6080": {
-      "label": "Yes/No Fish",
+      "label": "Fish",
       "onAutoForward": "openPreview",
       "visibility": "public",
       "protocol": "http",
