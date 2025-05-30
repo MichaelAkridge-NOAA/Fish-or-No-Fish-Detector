@@ -7,8 +7,8 @@
 Is there a fish 🐟 or not? 
 
 ![GIF description](./images/screenshots/00_video_track.gif)
-
-<img src="./images/screenshots/02.png"/>
+<img src="./s01.png"/>
+<img src="./s02.png"/>
 
 ## Features:
 - Upload one or more images to detect Fish
