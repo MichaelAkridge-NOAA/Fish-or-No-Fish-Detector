@@ -1,0 +1,12 @@
+tracker_type: botsort  # Using BoT-SORT for better tracking in dense environments
+track_high_thresh: 0.3  # Lower to capture more detections in crowded environments
+track_low_thresh: 0.1  # Keep low for occluded or weak detections
+new_track_thresh: 0.4  # Lower threshold to initiate new tracks more easily
+track_buffer: 60  # Increased to handle longer occlusions
+match_thresh: 0.6  # Slightly lower for lenient matching in close proximity
+fuse_score: False  # Focus more on IoU distance for matching
+gmc_method: sparseOptFlow  # Global motion compensation for slight camera movement
+proximity_thresh: 0.5  # Default proximity threshold for matching (ReID not enabled)
+appearance_thresh: 0.25  # Default appearance threshold (ReID not enabled)
+with_reid: False  # ReID is not yet supported in this version
+

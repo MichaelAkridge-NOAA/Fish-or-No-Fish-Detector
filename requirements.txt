@@ -1,6 +1,7 @@
+#pip install -r requirements.txt
 streamlit
-ultralytics
-Pillow
-pandas
+opencv-python
 numpy
-matplotlib
+torch
+ultralytics
+pillow
